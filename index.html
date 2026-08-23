@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS for Growth</title>
+    <link rel="stylesheet" href="./style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding-modal" class="modal">
+        <div class="modal-content glass-card">
+            <h1>WELCOME TO YOUR OS</h1>
+            <p>Build habits, track skills, level up. Fully customizable.</p>
+            <div class="input-group">
+                <label>YOUR NAME</label>
+                <input type="text" id="ob-name" placeholder="Traveler">
+            </div>
+            <div class="input-group">
+                <label>YOUR MAIN GOAL</label>
+                <input type="text" id="ob-goal" placeholder="e.g. Master Machine Learning">
+            </div>
+            <button class="btn-primary mt-2" id="btn-onboard">START MY JOURNEY</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app-container hidden">
+        <nav class="sidebar glass-card">
+            <div class="brand"><h1 id="app-title-display">MOMENTUM</h1></div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                <button class="nav-btn" data-view="quests">Quests</button>
+                <button class="nav-btn" data-view="timer">Focus Timer</button>
+                <button class="nav-btn" data-view="skills">Skill Tree</button>
+                <button class="nav-btn" data-view="bosses">Bosses</button>
+                <button class="nav-btn" data-view="analytics">Analytics</button>
+                <button class="nav-btn" data-view="settings">Settings</button>
+            </div>
+            <div class="user-mini-profile">
+                <div id="ui-username">User</div>
+                <div class="streak-disp">🔥 <span id="ui-streak">0</span> DAYS</div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <header class="topbar glass-card">
+                <div class="level-info">
+                    <div class="level-badge" id="ui-level">LV.1</div>
+                    <div class="xp-track">
+                        <div class="xp-label" id="ui-xp-text">0 / 0 XP</div>
+                        <div class="progress-bg"><div class="progress-fill" id="ui-xp-bar"></div></div>
+                    </div>
+                </div>
+                <div class="daily-budget">
+                    <span class="eyebrow">DAILY ENERGY</span>
+                    <div class="budget-stats"><span id="ui-budget-spent">0</span> / <span id="ui-budget-max">120</span> MIN</div>
+                    <div class="progress-bg"><div class="progress-fill danger-fill" id="ui-budget-bar"></div></div>
+                </div>
+            </header>
+
+            <!-- VIEWS -->
+            <div id="view-dashboard" class="view active">
+                <div id="dashboard-widgets" class="dashboard-grid"></div>
+            </div>
+
+            <div id="view-quests" class="view">
+                <div class="header-flex mb-2">
+                    <h2>Quests</h2>
+                    <button class="btn-primary" onclick="questManager.openEditor()">+ New Quest</button>
+                </div>
+                <div id="quest-list-container" class="glass-card list-container"></div>
+            </div>
+
+            <div id="view-timer" class="view">
+                <div class="glass-card timer-card">
+                    <h2>FOCUS MODE</h2>
+                    <div class="timer-display" id="timer-display">25:00</div>
+                    <div class="timer-controls" id="timer-presets-container"></div>
+                    <div class="timer-actions">
+                        <button class="btn-primary" id="btn-timer-start">START</button>
+                        <button class="btn-secondary" id="btn-timer-pause">PAUSE</button>
+                        <button class="btn-danger" id="btn-timer-reset">RESET</button>
+                        <button class="btn-success" id="btn-timer-finish">FINISH</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-skills" class="view">
+                <div class="header-flex mb-2">
+                    <h2>Skill Tree</h2>
+                    <button class="btn-primary" onclick="skillManager.openEditor()">+ Add Skill</button>
+                </div>
+                <div id="skills-container" class="glass-card"></div>
+            </div>
+            
+            <div id="view-bosses" class="view">
+                <div class="header-flex mb-2">
+                    <h2>Boss Fights</h2>
+                    <button class="btn-primary" onclick="bossManager.openEditor()">+ Add Boss</button>
+                </div>
+                <div id="bosses-container" class="dashboard-grid"></div>
+            </div>
+
+            <div id="view-analytics" class="view">
+                <div class="dashboard-grid mb-2">
+                    <div class="glass-card stat-box"><div class="eyebrow">Total XP</div><h2 id="stat-xp">0</h2></div>
+                    <div class="glass-card stat-box"><div class="eyebrow">Completed Tasks</div><h2 id="stat-tasks">0</h2></div>
+                    <div class="glass-card stat-box"><div class="eyebrow">Focus Hours</div><h2 id="stat-hours">0</h2></div>
+                </div>
+                <div class="glass-card">
+                    <h3>Activity Heatmap</h3>
+                    <div class="calendar-grid" id="ui-calendar"></div>
+                </div>
+            </div>
+
+            <div id="view-settings" class="view">
+                <div class="glass-card">
+                    <h2>Settings & Customization</h2>
+                    <p class="text-soft mb-2">Everything is stored in your local browser.</p>
+                    
+                    <div class="settings-grid">
+                        <!-- App & Theme -->
+                        <div class="settings-section">
+                            <h3>Theme & App</h3>
+                            <label>App Name</label>
+                            <input type="text" id="set-appname">
+                            <label>Primary Color (Hex)</label>
+                            <input type="color" id="set-color1">
+                            <label>Secondary Color (Hex)</label>
+                            <input type="color" id="set-color2">
+                            <label>Border Radius</label>
+                            <input type="number" id="set-radius" min="0" max="40">
+                            <button class="btn-primary mt-1" onclick="settingsManager.saveTheme()">Apply Theme</button>
+                        </div>
+                        
+                        <!-- Progression -->
+                        <div class="settings-section">
+                            <h3>Progression</h3>
+                            <label>Base Level XP Req</label>
+                            <input type="number" id="set-xpbase">
+                            <label>Level Multiplier</label>
+                            <input type="number" id="set-xpmult" step="0.1">
+                            <label>Daily Mins Budget</label>
+                            <input type="number" id="set-budget">
+                            <button class="btn-primary mt-1" onclick="settingsManager.saveProgression()">Save Progression</button>
+                        </div>
+                    </div>
+
+                    <hr class="spacer">
+
+                    <h3>Categories Manager</h3>
+                    <div class="flex-row mb-2">
+                        <input type="text" id="cat-new-name" placeholder="Category Name">
+                        <input type="color" id="cat-new-color" value="#8b5cf6">
+                        <button class="btn-secondary" onclick="settingsManager.addCategory()">Add</button>
+                    </div>
+                    <div id="categories-list" class="flex-wrap"></div>
+
+                    <hr class="spacer">
+
+                    <h3>Dashboard Widgets</h3>
+                    <div id="widget-toggles" class="flex-wrap mb-2"></div>
+
+                    <hr class="spacer">
+
+                    <h3>Data Management</h3>
+                    <div class="flex-row mt-2">
+                        <button class="btn-primary" onclick="dataManager.exportData()">Export (JSON)</button>
+                        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">Import (JSON)</button>
+                        <input type="file" id="import-file" style="display:none" accept=".json" onchange="dataManager.importData(event)">
+                        <button class="btn-danger ml-auto" onclick="dataManager.resetData()">FACTORY RESET</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Generic Modal for Editors -->
+    <div id="editor-modal" class="modal">
+        <div class="modal-content glass-card">
+            <h2 id="editor-title">Editor</h2>
+            <div id="editor-body"></div>
+            <div class="flex-row mt-2" style="justify-content: flex-end; gap: 10px;">
+                <button class="btn-secondary" onclick="document.getElementById('editor-modal').classList.remove('active')">Cancel</button>
+                <button class="btn-primary" id="editor-save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div id="xp-floater-container"></div>
+    <script src="./script.js"></script>
+</body>
+</html>

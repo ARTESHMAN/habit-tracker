@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOMENTUM — OS for Growth</title>
+    <link rel="stylesheet" href="./style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Ambient Orbs -->
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding" class="modal active">
+        <div class="modal-content glass-card">
+            <h1>WELCOME TO MOMENTUM</h1>
+            <p>Build your habits. Level up your skills. Track your progress.</p>
+            <div class="input-group">
+                <label>YOUR NAME</label>
+                <input type="text" id="ob-name" placeholder="E.g. Ali">
+            </div>
+            <div class="input-group">
+                <label>YOUR MAIN GOAL</label>
+                <input type="text" id="ob-goal" placeholder="E.g. Study, Fitness, IELTS, Coding">
+            </div>
+            <button class="btn-primary" id="btn-start-journey">START MY JOURNEY</button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container hidden">
+        
+        <!-- Sidebar / Navigation -->
+        <nav class="sidebar glass-card">
+            <div class="brand">
+                <h1>MOMENTUM</h1>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-target="dashboard">Dashboard</button>
+                <button class="nav-btn" data-target="quests">Quests</button>
+                <button class="nav-btn" data-target="focus">Focus Timer</button>
+                <button class="nav-btn" data-target="skills">Skills & Bosses</button>
+                <button class="nav-btn" data-target="analytics">Analytics</button>
+                <button class="nav-btn" data-target="readiness">App Readiness</button>
+                <button class="nav-btn" data-target="settings">Settings</button>
+            </div>
+            <div class="user-mini-profile">
+                <div id="ui-username">User</div>
+                <div class="streak-disp">🔥 <span id="ui-streak">0</span> DAYS</div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Top Bar Global Stats -->
+            <header class="topbar glass-card">
+                <div class="level-info">
+                    <div class="level-badge" id="ui-level">LV. 1</div>
+                    <div class="xp-track">
+                        <div class="xp-label" id="ui-xp-text">0 / 1000 XP</div>
+                        <div class="xp-bar-bg"><div class="xp-bar-fill" id="ui-xp-bar"></div></div>
+                    </div>
+                </div>
+                <div class="daily-budget">
+                    <span class="eyebrow">DAILY ENERGY</span>
+                    <div class="budget-stats"><span id="ui-budget-spent">0</span> / 120 MIN</div>
+                    <div class="xp-bar-bg"><div class="xp-bar-fill budget-fill" id="ui-budget-bar"></div></div>
+                </div>
+            </header>
+
+            <!-- VIEWS -->
+            <div id="view-dashboard" class="view active">
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <h3>Today's Quests</h3>
+                        <div id="dash-quests" class="quest-list"></div>
+                    </div>
+                    <div class="glass-card">
+                        <h3>Weekly XP</h3>
+                        <div class="weekly-chart" id="ui-weekly-chart"></div>
+                        <h3 style="margin-top:20px;">Recent Achievements</h3>
+                        <div class="achievements-mini" id="ui-achievements-mini"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-quests" class="view">
+                <div class="glass-card mb-2">
+                    <h3>Add a new quest</h3>
+                    <div class="add-quest-form">
+                        <input type="text" id="q-title" placeholder="Quest Title...">
+                        <select id="q-category">
+                            <option value="IELTS">IELTS</option>
+                            <option value="C++">C++</option>
+                            <option value="Linux">Linux</option>
+                            <option value="Systems">Systems</option>
+                            <option value="Machine Learning">Machine Learning</option>
+                            <option value="Distributed Systems">Distributed Systems</option>
+                            <option value="GPU">GPU</option>
+                            <option value="ML Systems">ML Systems</option>
+                            <option value="Research">Research</option>
+                            <option value="Project">Project</option>
+                            <option value="Personal">Personal</option>
+                        </select>
+                        <select id="q-diff">
+                            <option value="10">Easy (10 XP)</option>
+                            <option value="25">Medium (25 XP)</option>
+                            <option value="50">Hard (50 XP)</option>
+                            <option value="100">Epic (100 XP)</option>
+                        </select>
+                        <input type="number" id="q-time" placeholder="Mins" min="1" max="240" value="30">
+                        <button class="btn-primary" id="btn-add-quest">+ Add Quest</button>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <h3>Your Quests</h3>
+                    <div id="all-quests" class="quest-list"></div>
+                </div>
+            </div>
+
+            <div id="view-focus" class="view">
+                <div class="glass-card timer-card">
+                    <h2>FOCUS MODE</h2>
+                    <div class="timer-display" id="timer-display">25:00</div>
+                    <div class="timer-controls">
+                        <button class="btn-secondary" onclick="setTimer(25)">25 Min</button>
+                        <button class="btn-secondary" onclick="setTimer(50)">50 Min</button>
+                        <button class="btn-secondary" onclick="setTimer(90)">90 Min</button>
+                    </div>
+                    <div class="timer-actions">
+                        <button class="btn-primary" id="btn-timer-start">START</button>
+                        <button class="btn-secondary" id="btn-timer-pause">PAUSE</button>
+                        <button class="btn-danger" id="btn-timer-reset">RESET</button>
+                        <button class="btn-success" id="btn-timer-finish">FINISH</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-skills" class="view">
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <h3>Skill Tree</h3>
+                        <div id="skill-tree" class="skill-tree-container"></div>
+                    </div>
+                    <div class="glass-card">
+                        <h3>Boss Fights</h3>
+                        <div id="boss-list" class="boss-list-container"></div>
+                    </div>
+                </div>
+                <div class="glass-card mt-2">
+                    <h3>Long-Term Roadmap</h3>
+                    <div class="roadmap-flow">
+                        <div class="rm-step">Term 5<br><small>C++, Linux, OS, Arch</small></div>
+                        <div class="rm-arrow">↓</div>
+                        <div class="rm-step">Term 6<br><small>ML, Deep Learning, Net, Distributed</small></div>
+                        <div class="rm-arrow">↓</div>
+                        <div class="rm-step">Summer<br><small>CUDA, ML Systems, Research, IELTS</small></div>
+                        <div class="rm-arrow">↓</div>
+                        <div class="rm-step">Term 7<br><small>Paper, CV, SOP, Outreach</small></div>
+                        <div class="rm-arrow">↓</div>
+                        <div class="rm-step master-step">Funded MSc</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-analytics" class="view">
+                <div class="grid-3 mb-2">
+                    <div class="glass-card stat-box">
+                        <div class="eyebrow">Total XP</div>
+                        <h2 id="stat-xp">0</h2>
+                    </div>
+                    <div class="stat-box glass-card">
+                        <div class="eyebrow">Completed Tasks</div>
+                        <h2 id="stat-tasks">0</h2>
+                    </div>
+                    <div class="stat-box glass-card">
+                        <div class="eyebrow">Total Study Hours</div>
+                        <h2 id="stat-hours">0</h2>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <h3>Monthly Activity</h3>
+                    <div class="calendar-grid" id="ui-calendar"></div>
+                </div>
+            </div>
+
+            <div id="view-readiness" class="view">
+                <div class="glass-card">
+                    <div class="readiness-header">
+                        <h2>APPLICATION READINESS</h2>
+                        <h1 id="ui-readiness-total" class="readiness-total">0%</h1>
+                    </div>
+                    <div class="readiness-sliders" id="ui-readiness-sliders">
+                        <!-- Generated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-settings" class="view">
+                <div class="glass-card">
+                    <h2>Settings & Data</h2>
+                    <p class="text-soft">Your data is stored locally in your browser. Export it to back it up.</p>
+                    <div class="settings-actions mt-2">
+                        <button class="btn-primary" id="btn-export">Export Data (JSON)</button>
+                        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">Import Data</button>
+                        <input type="file" id="import-file" style="display:none" accept=".json">
+                        <button class="btn-danger ml-auto" id="btn-reset">RESET ALL DATA</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div id="xp-floater-container"></div>
+
+    <script src="./script.js"></script>
+</body>
+</html>

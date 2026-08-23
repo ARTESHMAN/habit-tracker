@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - هبیت ترکر</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap');
+        
+        :root {
+            --primary: #1a73e8;
+            --success: #10b981;
+            --danger: #ff4757;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2d3436;
+            --border: #e0e6ed;
+        }
+
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding: 20px; 
+            color: var(--text); 
+        }
+
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+        }
+
+        h1 { 
+            text-align: center; 
+            color: var(--primary); 
+            margin-bottom: 30px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            flex: 1;
+            min-width: 300px;
+        }
+
+        input[type="text"] { 
+            flex: 1; 
+            padding: 12px 15px; 
+            border: 2px solid var(--border); 
+            border-radius: 8px; 
+            font-family: 'Vazirmatn'; 
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        button { 
+            background: var(--primary); 
+            color: #fff; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-family: 'Vazirmatn'; 
+            font-weight: bold;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        button:hover { 
+            background: #1557b0; 
+            transform: translateY(-2px);
+        }
+
+        .summary { 
+            background: rgba(26, 115, 232, 0.1);
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 1.2em; 
+            font-weight: bold; 
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .summary-progress-bg {
+            width: 150px;
+            height: 12px;
+            background: #dfe6e9;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .summary-progress-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.5s ease-out;
+        }
+
+        .tracker-wrapper { 
+            overflow-x: auto; 
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 1000px; 
+        }
+
+        th, td { 
+            border: 1px solid var(--border); 
+            padding: 12px 8px; 
+            text-align: center; 
+            vertical-align: middle;
+        }
+
+        th { 
+            background: #f1f3f5; 
+            font-weight: bold; 
+            font-size: 0.9em;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+
+        .habit-name { 
+            text-align: right; 
+            font-weight: bold; 
+            min-width: 180px; 
+            background: #fafbfc;
+        }
+
+        .checkbox-cell {
+            transition: background-color 0.2s;
+        }
+        
+        .checkbox-cell.checked {
+            background-color: rgba(16, 185, 129, 0.15);
+        }
+
+        input[type="checkbox"] { 
+            width: 20px; 
+            height: 20px; 
+            cursor: pointer; 
+            accent-color: var(--success); 
+        }
+
+        .progress-td {
+            min-width: 100px;
+        }
+
+        .progress-bar-bg { 
+            background: #eee; 
+            border-radius: 10px; 
+            height: 8px; 
+            width: 100%; 
+            margin-top: 8px; 
+            overflow: hidden; 
+        }
+
+        .progress-bar-fill { 
+            background: var(--success); 
+            height: 100%; 
+            transition: width 0.4s ease-out; 
+        }
+
+        .delete-btn { 
+            background: var(--danger); 
+            padding: 6px 12px; 
+            font-size: 0.8em; 
+        }
+
+        .delete-btn:hover { 
+            background: #ff6b81; 
+        }
+
+        /* Grouping weeks logically via border */
+        th:nth-child(8), td:nth-child(8),
+        th:nth-child(15), td:nth-child(15),
+        th:nth-child(22), td:nth-child(22),
+        th:nth-child(29), td:nth-child(29) {
+            border-left: 2px solid #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>داشبورد ردیابی عادات (Habit Tracker)</h1>
+        
+        <div class="dashboard-header">
+            <div class="controls">
+                <input type="text" id="habitInput" placeholder="عادت جدید را وارد کن... (مثلاً: ۳۰ دقیقه ورزش)" onkeypress="handleKeyPress(event)">
+                <button onclick="addHabit()">+ افزودن</button>
+            </div>
+            
+            <div class="summary">
+                <span>پیشرفت کل ماه: <span id="totalProgressText">0</span>%</span>
+                <div class="summary-progress-bg">
+                    <div id="totalProgressFill" class="summary-progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tracker-wrapper">
+            <table id="trackerTable">
+                <thead>
+                    <tr id="tableHeader">
+                        <!-- JS will populate this -->
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- JS will populate this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Load data from LocalStorage or use default template
+        let habits = JSON.parse(localStorage.getItem('myHabits')) || [
+            { name: "خوردن ۸ لیوان آب", days: Array(31).fill(false) },
+            { name: "۳۰ دقیقه مطالعه", days: Array(31).fill(false) },
+            { name: "کدنویسی و توسعه پروژه", days: Array(31).fill(false) }
+        ];
+
+        function saveHabits() {
+            localStorage.setItem('myHabits', JSON.stringify(habits));
+            render();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                addHabit();
+            }
+        }
+
+        function addHabit() {
+            const input = document.getElementById('habitInput');
+            const name = input.value.trim();
+            if (name) {
+                habits.push({ name: name, days: Array(31).fill(false) });
+                input.value = '';
+                saveHabits();
+            }
+        }
+
+        function deleteHabit(index) {
+            if(confirm('آیا از حذف این ردیف مطمئنی؟')) {
+                habits.splice(index, 1);
+                saveHabits();
+            }
+        }
+
+        function toggleDay(habitIndex, dayIndex) {
+            habits[habitIndex].days[dayIndex] = !habits[habitIndex].days[dayIndex];
+            saveHabits();
+        }
+
+        function render() {
+            const header = document.getElementById('tableHeader');
+            const body = document.getElementById('tableBody');
+            
+            // Render Header
+            header.innerHTML = '<th class="habit-name">عادات روزانه</th>';
+            for (let i = 1; i <= 31; i++) {
+                header.innerHTML += `<th>${i}</th>`;
+            }
+            header.innerHTML += '<th>پیشرفت</th><th>عملیات</th>';
+
+            // Render Body
+            body.innerHTML = '';
+            let totalDaysTracked = 0;
+            let totalDaysPossible = habits.length * 31;
+
+            habits.forEach((habit, hIndex) => {
+                let tr = document.createElement('tr');
+                
+                // Habit Name
+                let nameTd = document.createElement('td');
+                nameTd.className = 'habit-name';
+                nameTd.innerText = habit.name;
+                tr.appendChild(nameTd);
+
+                // Days Checkboxes
+                let completedDays = 0;
+                habit.days.forEach((day, dIndex) => {
+                    if (day) completedDays++;
+                    
+                    let td = document.createElement('td');
+                    td.className = 'checkbox-cell ' + (day ? 'checked' : '');
+                    
+                    let cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = day;
+                    cb.onclick = () => toggleDay(hIndex, dIndex);
+                    
+                    td.appendChild(cb);
+                    tr.appendChild(td);
+                });
+                
+                totalDaysTracked += completedDays;
+
+                // Progress per habit
+                let progressPercent = Math.round((completedDays / 31) * 100);
+                let progressTd = document.createElement('td');
+                progressTd.className = 'progress-td';
+                progressTd.innerHTML = `
+                    <span style="font-weight: bold; color: var(--success);">${progressPercent}%</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                `;
+                tr.appendChild(progressTd);
+
+                // Delete Button
+                let actionTd = document.createElement('td');
+                let delBtn = document.createElement('button');
+                delBtn.className = 'delete-btn';
+                delBtn.innerHTML = '🗑️';
+                delBtn.onclick = () => deleteHabit(hIndex);
+                actionTd.appendChild(delBtn);
+                tr.appendChild(actionTd);
+
+                body.appendChild(tr);
+            });
+
+            // Update Total Progress
+            let totalProgress = totalDaysPossible === 0 ? 0 : Math.round((totalDaysTracked / totalDaysPossible) * 100);
+            document.getElementById('totalProgressText').innerText = totalProgress;
+            document.getElementById('totalProgressFill').style.width = totalProgress + '%';
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>

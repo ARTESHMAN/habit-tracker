@@ -66,6 +66,14 @@
 
             <!-- VIEWS -->
             <div id="view-dashboard" class="view active">
+                <section class="dashboard-intro glass-card">
+                    <div>
+                        <span class="eyebrow" id="ui-date"></span>
+                        <h2 id="ui-greeting">Welcome back</h2>
+                        <p class="text-soft" id="ui-goal"></p>
+                    </div>
+                    <button class="btn-secondary" onclick="ui.openView('quests')">View quests</button>
+                </section>
                 <div id="dashboard-widgets" class="dashboard-grid"></div>
             </div>
 
@@ -73,6 +81,17 @@
                 <div class="header-flex mb-2">
                     <h2>Quests</h2>
                     <button class="btn-primary" onclick="questManager.openEditor()">+ New Quest</button>
+                </div>
+                <div class="quest-toolbar glass-card mb-2">
+                    <div>
+                        <strong id="quest-progress-label">0 / 0 completed</strong>
+                        <div class="progress-bg"><div class="progress-fill" id="quest-progress-bar"></div></div>
+                    </div>
+                    <div class="filter-buttons" role="group" aria-label="Quest filters">
+                        <button class="btn-secondary btn-small active" data-quest-filter="active">Active</button>
+                        <button class="btn-secondary btn-small" data-quest-filter="all">All</button>
+                        <button class="btn-secondary btn-small" data-quest-filter="completed">Completed</button>
+                    </div>
                 </div>
                 <div id="quest-list-container" class="glass-card list-container"></div>
             </div>
@@ -136,6 +155,11 @@
                             <input type="color" id="set-color2">
                             <label>Border Radius</label>
                             <input type="number" id="set-radius" min="0" max="40">
+                            <label>Sound Effects</label>
+                            <select id="set-sound">
+                                <option value="on">On (Retro Chiptune)</option>
+                                <option value="off">Off (Mute)</option>
+                            </select>
                             <button class="btn-primary mt-1" onclick="settingsManager.saveTheme()">Apply Theme</button>
                         </div>
                         

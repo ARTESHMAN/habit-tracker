@@ -1,224 +1,110 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS for Growth</title>
-    <link rel="stylesheet" href="./style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habit Tracker + Deadline & Study Planner</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-    <div class="orb orb3"></div>
-
-    <!-- Onboarding Modal -->
-    <div id="onboarding-modal" class="modal">
-        <div class="modal-content glass-card">
-            <h1>WELCOME TO YOUR OS</h1>
-            <p>Build habits, track skills, level up. Fully customizable.</p>
-            <div class="input-group">
-                <label>YOUR NAME</label>
-                <input type="text" id="ob-name" placeholder="Traveler">
-            </div>
-            <div class="input-group">
-                <label>YOUR MAIN GOAL</label>
-                <input type="text" id="ob-goal" placeholder="e.g. Master Machine Learning">
-            </div>
-            <button class="btn-primary mt-2" id="btn-onboard">START MY JOURNEY</button>
-        </div>
+  <header class="app-header">
+    <div>
+      <h1>📚 Study Planner & Habit Tracker</h1>
+      <p id="header-summary">Loading your deadlines & study plan...</p>
     </div>
-
-    <!-- Main App -->
-    <div id="app" class="app-container hidden">
-        <nav class="sidebar glass-card">
-            <div class="brand"><h1 id="app-title-display">MOMENTUM</h1></div>
-            <div class="nav-links">
-                <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-                <button class="nav-btn" data-view="quests">Quests</button>
-                <button class="nav-btn" data-view="timer">Focus Timer</button>
-                <button class="nav-btn" data-view="skills">Skill Tree</button>
-                <button class="nav-btn" data-view="bosses">Bosses</button>
-                <button class="nav-btn" data-view="analytics">Analytics</button>
-                <button class="nav-btn" data-view="settings">Settings</button>
-            </div>
-            <div class="user-mini-profile">
-                <div id="ui-username">User</div>
-                <div class="streak-disp">🔥 <span id="ui-streak">0</span> DAYS</div>
-            </div>
-        </nav>
-
-        <main class="main-content">
-            <header class="topbar glass-card">
-                <div class="level-info">
-                    <div class="level-badge" id="ui-level">LV.1</div>
-                    <div class="xp-track">
-                        <div class="xp-label" id="ui-xp-text">0 / 0 XP</div>
-                        <div class="progress-bg"><div class="progress-fill" id="ui-xp-bar"></div></div>
-                    </div>
-                </div>
-                <div class="daily-budget">
-                    <span class="eyebrow">DAILY ENERGY</span>
-                    <div class="budget-stats"><span id="ui-budget-spent">0</span> / <span id="ui-budget-max">120</span> MIN</div>
-                    <div class="progress-bg"><div class="progress-fill danger-fill" id="ui-budget-bar"></div></div>
-                </div>
-            </header>
-
-            <!-- VIEWS -->
-            <div id="view-dashboard" class="view active">
-                <section class="dashboard-intro glass-card">
-                    <div>
-                        <span class="eyebrow" id="ui-date"></span>
-                        <h2 id="ui-greeting">Welcome back</h2>
-                        <p class="text-soft" id="ui-goal"></p>
-                    </div>
-                    <button class="btn-secondary" onclick="ui.openView('quests')">View quests</button>
-                </section>
-                <div id="dashboard-widgets" class="dashboard-grid"></div>
-            </div>
-
-            <div id="view-quests" class="view">
-                <div class="header-flex mb-2">
-                    <h2>Quests</h2>
-                    <button class="btn-primary" onclick="questManager.openEditor()">+ New Quest</button>
-                </div>
-                <div class="quest-toolbar glass-card mb-2">
-                    <div>
-                        <strong id="quest-progress-label">0 / 0 completed</strong>
-                        <div class="progress-bg"><div class="progress-fill" id="quest-progress-bar"></div></div>
-                    </div>
-                    <div class="filter-buttons" role="group" aria-label="Quest filters">
-                        <button class="btn-secondary btn-small active" data-quest-filter="active">Active</button>
-                        <button class="btn-secondary btn-small" data-quest-filter="all">All</button>
-                        <button class="btn-secondary btn-small" data-quest-filter="completed">Completed</button>
-                    </div>
-                </div>
-                <div id="quest-list-container" class="glass-card list-container"></div>
-            </div>
-
-            <div id="view-timer" class="view">
-                <div class="glass-card timer-card">
-                    <h2>FOCUS MODE</h2>
-                    <div class="timer-display" id="timer-display">25:00</div>
-                    <div class="timer-controls" id="timer-presets-container"></div>
-                    <div class="timer-actions">
-                        <button class="btn-primary" id="btn-timer-start">START</button>
-                        <button class="btn-secondary" id="btn-timer-pause">PAUSE</button>
-                        <button class="btn-danger" id="btn-timer-reset">RESET</button>
-                        <button class="btn-success" id="btn-timer-finish">FINISH</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-skills" class="view">
-                <div class="header-flex mb-2">
-                    <h2>Skill Tree</h2>
-                    <button class="btn-primary" onclick="skillManager.openEditor()">+ Add Skill</button>
-                </div>
-                <div id="skills-container" class="glass-card"></div>
-            </div>
-            
-            <div id="view-bosses" class="view">
-                <div class="header-flex mb-2">
-                    <h2>Boss Fights</h2>
-                    <button class="btn-primary" onclick="bossManager.openEditor()">+ Add Boss</button>
-                </div>
-                <div id="bosses-container" class="dashboard-grid"></div>
-            </div>
-
-            <div id="view-analytics" class="view">
-                <div class="dashboard-grid mb-2">
-                    <div class="glass-card stat-box"><div class="eyebrow">Total XP</div><h2 id="stat-xp">0</h2></div>
-                    <div class="glass-card stat-box"><div class="eyebrow">Completed Tasks</div><h2 id="stat-tasks">0</h2></div>
-                    <div class="glass-card stat-box"><div class="eyebrow">Focus Hours</div><h2 id="stat-hours">0</h2></div>
-                </div>
-                <div class="glass-card">
-                    <h3>Activity Heatmap</h3>
-                    <div class="calendar-grid" id="ui-calendar"></div>
-                </div>
-            </div>
-
-            <div id="view-settings" class="view">
-                <div class="glass-card">
-                    <h2>Settings & Customization</h2>
-                    <p class="text-soft mb-2">Everything is stored in your local browser.</p>
-                    
-                    <div class="settings-grid">
-                        <!-- App & Theme -->
-                        <div class="settings-section">
-                            <h3>Theme & App</h3>
-                            <label>App Name</label>
-                            <input type="text" id="set-appname">
-                            <label>Primary Color (Hex)</label>
-                            <input type="color" id="set-color1">
-                            <label>Secondary Color (Hex)</label>
-                            <input type="color" id="set-color2">
-                            <label>Border Radius</label>
-                            <input type="number" id="set-radius" min="0" max="40">
-                            <label>Sound Effects</label>
-                            <select id="set-sound">
-                                <option value="on">On (Retro Chiptune)</option>
-                                <option value="off">Off (Mute)</option>
-                            </select>
-                            <button class="btn-primary mt-1" onclick="settingsManager.saveTheme()">Apply Theme</button>
-                        </div>
-                        
-                        <!-- Progression -->
-                        <div class="settings-section">
-                            <h3>Progression</h3>
-                            <label>Base Level XP Req</label>
-                            <input type="number" id="set-xpbase">
-                            <label>Level Multiplier</label>
-                            <input type="number" id="set-xpmult" step="0.1">
-                            <label>Daily Mins Budget</label>
-                            <input type="number" id="set-budget">
-                            <button class="btn-primary mt-1" onclick="settingsManager.saveProgression()">Save Progression</button>
-                        </div>
-                    </div>
-
-                    <hr class="spacer">
-
-                    <h3>Categories Manager</h3>
-                    <div class="flex-row mb-2">
-                        <input type="text" id="cat-new-name" placeholder="Category Name">
-                        <input type="color" id="cat-new-color" value="#8b5cf6">
-                        <button class="btn-secondary" onclick="settingsManager.addCategory()">Add</button>
-                    </div>
-                    <div id="categories-list" class="flex-wrap"></div>
-
-                    <hr class="spacer">
-
-                    <h3>Dashboard Widgets</h3>
-                    <div id="widget-toggles" class="flex-wrap mb-2"></div>
-
-                    <hr class="spacer">
-
-                    <h3>Data Management</h3>
-                    <div class="flex-row mt-2">
-                        <button class="btn-primary" onclick="dataManager.exportData()">Export (JSON)</button>
-                        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">Import (JSON)</button>
-                        <input type="file" id="import-file" style="display:none" accept=".json" onchange="dataManager.importData(event)">
-                        <button class="btn-danger ml-auto" onclick="dataManager.resetData()">FACTORY RESET</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <div class="sync-controls">
+      <button id="btn-open-sync" class="btn btn-secondary">🔄 Sync Devices</button>
+      <button id="btn-export-ics" class="btn btn-outline">📅 Export to Phone/Tablet Calendar (.ics)</button>
     </div>
+  </header>
 
-    <!-- Generic Modal for Editors -->
-    <div id="editor-modal" class="modal">
-        <div class="modal-content glass-card">
-            <h2 id="editor-title">Editor</h2>
-            <div id="editor-body"></div>
-            <div class="flex-row mt-2" style="justify-content: flex-end; gap: 10px;">
-                <button class="btn-secondary" onclick="document.getElementById('editor-modal').classList.remove('active')">Cancel</button>
-                <button class="btn-primary" id="editor-save">Save</button>
-            </div>
-        </div>
+  <!-- Cloud Sync Modal / Panel -->
+  <section id="sync-panel" class="card hidden">
+    <h3>☁️ Cross-Device Sync (Laptop, Tablet & Mobile)</h3>
+    <p class="hint">
+      Paste a free <strong>Firebase Realtime Database URL</strong> (e.g., <code>https://your-project-default-rtdb.firebaseio.com</code>) and a secret Sync Key on all your devices to sync in real time, or use the quick Sync Code below.
+    </p>
+    <div class="form-row">
+      <input type="url" id="firebase-url" placeholder="https://your-app-default-rtdb.firebaseio.com" />
+      <input type="text" id="sync-key" placeholder="Secret Key (e.g. ali-study-2026)" />
+      <button id="btn-cloud-push" class="btn btn-primary">⬆️ Save to Cloud</button>
+      <button id="btn-cloud-pull" class="btn btn-secondary">⬇️ Load from Cloud</button>
     </div>
+    <hr />
+    <div class="form-row">
+      <button id="btn-copy-json" class="btn btn-outline">📋 Copy Backup Code</button>
+      <button id="btn-paste-json" class="btn btn-outline">📥 Paste Backup Code</button>
+      <span id="sync-status" class="status-text"></span>
+    </div>
+  </section>
 
-    <div class="toast" id="toast"></div>
-    <div id="xp-floater-container"></div>
-    <script src="./script.js"></script>
+  <main class="dashboard-grid">
+    <!-- LEFT COLUMN: Deadlines & Auto Study Plan Generator -->
+    <section class="card">
+      <div class="section-header">
+        <h2>⏳ Deadlines (<span id="deadline-count">0</span>)</h2>
+        <button id="btn-generate-plan" class="btn btn-accent">⚡ Auto-Build 2-Week Study Plan</button>
+      </div>
+
+      <form id="deadline-form" class="form-grid">
+        <input type="text" id="dl-title" placeholder="Subject / Deadline (e.g. OS Lab Report 4)" required />
+        <input type="date" id="dl-date" required />
+        <select id="dl-priority">
+          <option value="3">🔥 High Priority (4 Study Blocks)</option>
+          <option value="2" selected>⚡ Medium Priority (3 Study Blocks)</option>
+          <option value="1">🌱 Low Priority (2 Study Blocks)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">+ Add Deadline</button>
+      </form>
+
+      <ul id="deadline-list" class="item-list"></ul>
+    </section>
+
+    <!-- RIGHT COLUMN: Interactive Calendar -->
+    <section class="card">
+      <div class="section-header">
+        <button id="prev-month" class="btn btn-icon">◀</button>
+        <h2 id="calendar-title">Month Year</h2>
+        <button id="next-month" class="btn btn-icon">▶</button>
+      </div>
+      <div class="calendar-Legend">
+        <span class="badge badge-deadline">🎯 Deadline</span>
+        <span class="badge badge-study">📖 Study Task</span>
+      </div>
+      <div class="calendar-weekdays">
+        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+
+      <!-- Selected Day Details -->
+      <div id="day-detail" class="day-detail">
+        <h3 id="selected-date-label">Select a date</h3>
+        <div id="selected-date-content"></div>
+      </div>
+    </section>
+
+    <!-- BOTTOM LEFT: Generated Study Plan Checklist -->
+    <section class="card">
+      <div class="section-header">
+        <h2>🗓️ Daily Study Plan</h2>
+        <span id="plan-progress" class="badge badge-study">0% Completed</span>
+      </div>
+      <div id="study-plan-list" class="study-plan-container"></div>
+    </section>
+
+    <!-- BOTTOM RIGHT: Daily Habit Tracker -->
+    <section class="card">
+      <div class="section-header">
+        <h2>✅ Daily Study Habits</h2>
+      </div>
+      <form id="habit-form" class="form-row">
+        <input type="text" id="habit-input" placeholder="New daily habit (e.g. 2h Deep Work, Review Flashcards)" required />
+        <button type="submit" class="btn btn-primary">+ Add</button>
+      </form>
+      <ul id="habit-list" class="item-list"></ul>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>

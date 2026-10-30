@@ -49,10 +49,6 @@ A clean, dependency-free architecture:
 
 ---
 
-## 📸 Screenshots
-
-*(💡 Note: Add a screenshot of your dashboard here! Just drag and drop an image of your app into the GitHub editor to generate a link).*
-
 ---
 
 ## 👨‍💻 Author

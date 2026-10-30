@@ -3,108 +3,157 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Tracker + Deadline & Study Planner</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Study Planner & Habit Tracker</title>
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
-  <header class="app-header">
-    <div>
-      <h1>📚 Study Planner & Habit Tracker</h1>
-      <p id="header-summary">Loading your deadlines & study plan...</p>
-    </div>
-    <div class="sync-controls">
-      <button id="btn-open-sync" class="btn btn-secondary">🔄 Sync Devices</button>
-      <button id="btn-export-ics" class="btn btn-outline">📅 Export to Phone/Tablet Calendar (.ics)</button>
-    </div>
-  </header>
-
-  <!-- Cloud Sync Modal / Panel -->
-  <section id="sync-panel" class="card hidden">
-    <h3>☁️ Cross-Device Sync (Laptop, Tablet & Mobile)</h3>
-    <p class="hint">
-      Paste a free <strong>Firebase Realtime Database URL</strong> (e.g., <code>https://your-project-default-rtdb.firebaseio.com</code>) and a secret Sync Key on all your devices to sync in real time, or use the quick Sync Code below.
-    </p>
-    <div class="form-row">
-      <input type="url" id="firebase-url" placeholder="https://your-app-default-rtdb.firebaseio.com" />
-      <input type="text" id="sync-key" placeholder="Secret Key (e.g. ali-study-2026)" />
-      <button id="btn-cloud-push" class="btn btn-primary">⬆️ Save to Cloud</button>
-      <button id="btn-cloud-pull" class="btn btn-secondary">⬇️ Load from Cloud</button>
-    </div>
-    <hr />
-    <div class="form-row">
-      <button id="btn-copy-json" class="btn btn-outline">📋 Copy Backup Code</button>
-      <button id="btn-paste-json" class="btn btn-outline">📥 Paste Backup Code</button>
-      <span id="sync-status" class="status-text"></span>
-    </div>
-  </section>
-
-  <main class="dashboard-grid">
-    <!-- LEFT COLUMN: Deadlines & Auto Study Plan Generator -->
-    <section class="card">
-      <div class="section-header">
-        <h2>⏳ Deadlines (<span id="deadline-count">0</span>)</h2>
-        <button id="btn-generate-plan" class="btn btn-accent">⚡ Auto-Build 2-Week Study Plan</button>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <h1>📚 Study Planner &amp; Habit Tracker</h1>
+        <p id="header-summary">0 Deadlines • 0 Study Blocks Remaining</p>
       </div>
-
-      <form id="deadline-form" class="form-grid">
-        <input type="text" id="dl-title" placeholder="Subject / Deadline (e.g. OS Lab Report 4)" required />
-        <input type="date" id="dl-date" required />
-        <select id="dl-priority">
-          <option value="3">🔥 High Priority (4 Study Blocks)</option>
-          <option value="2" selected>⚡ Medium Priority (3 Study Blocks)</option>
-          <option value="1">🌱 Low Priority (2 Study Blocks)</option>
-        </select>
-        <button type="submit" class="btn btn-primary">+ Add Deadline</button>
-      </form>
-
-      <ul id="deadline-list" class="item-list"></ul>
-    </section>
-
-    <!-- RIGHT COLUMN: Interactive Calendar -->
-    <section class="card">
-      <div class="section-header">
-        <button id="prev-month" class="btn btn-icon">◀</button>
-        <h2 id="calendar-title">Month Year</h2>
-        <button id="next-month" class="btn btn-icon">▶</button>
+      <div class="header-actions">
+        <button type="button" id="btn-open-sync" class="btn btn-dark">
+          🔄 Sync Devices
+        </button>
+        <button type="button" id="btn-export-ics" class="btn btn-dark">
+          📅 Export to Calendar (.ics)
+        </button>
       </div>
-      <div class="calendar-Legend">
-        <span class="badge badge-deadline">🎯 Deadline</span>
-        <span class="badge badge-study">📖 Study Task</span>
-      </div>
-      <div class="calendar-weekdays">
-        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-      </div>
-      <div id="calendar-grid" class="calendar-grid"></div>
+    </header>
 
-      <!-- Selected Day Details -->
-      <div id="day-detail" class="day-detail">
-        <h3 id="selected-date-label">Select a date</h3>
-        <div id="selected-date-content"></div>
+    <!-- Collapsible Cloud Sync Panel (Laptop, Tablet & Mobile) -->
+    <section id="sync-panel" class="card sync-card hidden">
+      <div class="card-header">
+        <h2>☁️ Cross-Device Sync (Laptop, Tablet &amp; Mobile)</h2>
+        <span id="sync-status" class="sync-status">Not connected</span>
+      </div>
+      <p class="helper-text">
+        Enter a free Firebase Realtime Database URL and a personal Sync Key on your laptop, tablet, and phone to sync automatically, or copy/paste a backup code below.
+      </p>
+      <div class="sync-grid">
+        <input
+          type="url"
+          id="firebase-url"
+          placeholder="https://your-project-default-rtdb.firebaseio.com"
+        />
+        <input
+          type="text"
+          id="sync-key"
+          placeholder="Secret Sync Key (e.g. ali-deadlines)"
+        />
+        <button type="button" id="btn-cloud-push" class="btn btn-neon">
+          ⬆️ Save to Cloud
+        </button>
+        <button type="button" id="btn-cloud-pull" class="btn btn-dark">
+          ⬇️ Load from Cloud
+        </button>
+      </div>
+      <div class="sync-backup-row">
+        <button type="button" id="btn-copy-json" class="btn btn-outline">
+          📋 Copy Sync Code
+        </button>
+        <button type="button" id="btn-paste-json" class="btn btn-outline">
+          📥 Paste Sync Code
+        </button>
       </div>
     </section>
 
-    <!-- BOTTOM LEFT: Generated Study Plan Checklist -->
-    <section class="card">
-      <div class="section-header">
-        <h2>🗓️ Daily Study Plan</h2>
-        <span id="plan-progress" class="badge badge-study">0% Completed</span>
-      </div>
-      <div id="study-plan-list" class="study-plan-container"></div>
-    </section>
+    <!-- Main 4-Panel Dashboard Grid -->
+    <main class="dashboard-grid">
+      <!-- 1. Deadlines Manager -->
+      <section class="card">
+        <div class="card-header">
+          <h2>⏳ Deadlines (<span id="deadline-count">0</span>)</h2>
+          <button type="button" id="btn-generate-plan" class="btn btn-neon-sm">
+            ⚡ Auto-Build 2-Week Study Plan
+          </button>
+        </div>
 
-    <!-- BOTTOM RIGHT: Daily Habit Tracker -->
-    <section class="card">
-      <div class="section-header">
-        <h2>✅ Daily Study Habits</h2>
-      </div>
-      <form id="habit-form" class="form-row">
-        <input type="text" id="habit-input" placeholder="New daily habit (e.g. 2h Deep Work, Review Flashcards)" required />
-        <button type="submit" class="btn btn-primary">+ Add</button>
-      </form>
-      <ul id="habit-list" class="item-list"></ul>
-    </section>
-  </main>
+        <form id="deadline-form" class="stack-form">
+          <input
+            type="text"
+            id="dl-title"
+            placeholder="Subject / Deadline (e.g. OS Lab Report 4)"
+            required
+          />
+          <div class="form-split">
+            <input type="date" id="dl-date" required />
+            <select id="dl-priority">
+              <option value="3">🔥 High Priority (4 Study Blocks)</option>
+              <option value="2" selected>⚡ Medium Priority (3 Study Blocks)</option>
+              <option value="1">🌱 Low Priority (2 Study Blocks)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-neon">+ Add Deadline</button>
+        </form>
 
-  <script src="script.js"></script>
+        <ul id="deadline-list" class="item-list"></ul>
+      </section>
+
+      <!-- 2. Interactive Deadline & Study Calendar -->
+      <section class="card">
+        <div class="card-header calendar-nav">
+          <button type="button" id="prev-month" class="btn btn-icon">◀</button>
+          <h2 id="calendar-title">October 2026</h2>
+          <button type="button" id="next-month" class="btn btn-icon">▶</button>
+        </div>
+
+        <div class="calendar-legend">
+          <span class="legend-pill pill-deadline">🎯 Deadline</span>
+          <span class="legend-pill pill-study">📖 Study Block</span>
+        </div>
+
+        <div class="calendar-weekdays">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+
+        <div id="calendar-grid" class="calendar-grid"></div>
+
+        <div class="day-inspector">
+          <h3 id="selected-date-label">Selected Date</h3>
+          <div id="selected-date-content" class="day-inspector-body"></div>
+        </div>
+      </section>
+
+      <!-- 3. Auto-Generated 2-Week Study Plan -->
+      <section class="card">
+        <div class="card-header">
+          <h2>🗓️ Daily Study Plan</h2>
+          <span id="plan-progress" class="badge-progress">0% Completed</span>
+        </div>
+        <div id="study-plan-list" class="study-plan-list"></div>
+      </section>
+
+      <!-- 4. Daily Study Habits -->
+      <section class="card">
+        <div class="card-header">
+          <h2>✅ Daily Study Habits</h2>
+        </div>
+
+        <form id="habit-form" class="inline-form">
+          <input
+            type="text"
+            id="habit-input"
+            placeholder="New daily habit (e.g. 2h Deep Work)"
+            required
+          />
+          <button type="submit" class="btn btn-neon">+ Add</button>
+        </form>
+
+        <ul id="habit-list" class="item-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js?v=2"></script>
 </body>
 </html>

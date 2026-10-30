@@ -1,22 +1,37 @@
-const STORAGE_KEY = "study_habit_planner_v1";
+const STORAGE_KEY = "study_habit_planner_v2";
 
-// Default state
-let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-  deadlines: [],
-  studyTasks: [], // { id, deadlineId, title, date, done }
-  habits: [
-    { id: "h1", title: "2x Pomodoro Deep Study", completedDates: [] },
-    { id: "h2", title: "Review Tomorrow's Deadlines", completedDates: [] }
-  ],
-  syncConfig: {
-    firebaseUrl: "",
-    syncKey: ""
+// Load saved state safely
+function loadInitialState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        deadlines: Array.isArray(parsed.deadlines) ? parsed.deadlines : [],
+        studyTasks: Array.isArray(parsed.studyTasks) ? parsed.studyTasks : [],
+        habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+        syncConfig: parsed.syncConfig || { firebaseUrl: "", syncKey: "" }
+      };
+    }
+  } catch (e) {
+    console.warn("Resetting local state due to parse error:", e);
   }
-};
+  return {
+    deadlines: [],
+    studyTasks: [],
+    habits: [
+      { id: "h_1", title: "2h Focused Study (No Phone)", completedDates: [] },
+      { id: "h_2", title: "Review Tomorrow's Deadlines", completedDates: [] }
+    ],
+    syncConfig: { firebaseUrl: "", syncKey: "" }
+  };
+}
 
+let state = loadInitialState();
 let currentMonth = new Date();
 let selectedDateStr = toISODate(new Date());
 
+// Helper: Format Date object as YYYY-MM-DD in local timezone
 function toISODate(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -24,149 +39,214 @@ function toISODate(dateObj) {
   return `${y}-${m}-${d}`;
 }
 
-function saveState() {
+// Helper: Escape HTML to prevent broken tags
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function saveState(skipCloud = false) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   renderAll();
-  // Auto-push to cloud if configured
-  if (state.syncConfig.firebaseUrl && state.syncConfig.syncKey) {
+  if (!skipCloud && state.syncConfig.firebaseUrl && state.syncConfig.syncKey) {
     pushToCloud(true);
   }
 }
 
 // ==========================================
-// 1. DEADLINES & AUTO STUDY PLAN GENERATOR
+// 1. DEADLINES & SMART 2-WEEK STUDY PLANNER
 // ==========================================
-document.getElementById("deadline-form").addEventListener("submit", (e) => {
+const deadlineForm = document.getElementById("deadline-form");
+const dlDateInput = document.getElementById("dl-date");
+if (dlDateInput) dlDateInput.value = toISODate(new Date());
+
+deadlineForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const title = document.getElementById("dl-title").value.trim();
-  const date = document.getElementById("dl-date").value;
-  const priority = parseInt(document.getElementById("dl-priority").value, 10);
+  const titleEl = document.getElementById("dl-title");
+  const dateEl = document.getElementById("dl-date");
+  const priorityEl = document.getElementById("dl-priority");
+
+  const title = titleEl.value.trim();
+  const date = dateEl.value;
+  const priority = parseInt(priorityEl.value, 10) || 2;
 
   if (!title || !date) return;
 
   state.deadlines.push({
-    id: "dl_" + Date.now(),
+    id: "dl_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
     title,
     date,
-    priority // 3 = High (4 blocks), 2 = Med (3 blocks), 1 = Low (2 blocks)
+    priority
   });
 
   state.deadlines.sort((a, b) => a.date.localeCompare(b.date));
-  e.target.reset();
+  titleEl.value = "";
+  selectedDateStr = date;
   saveState();
 });
 
-function deleteDeadline(id) {
+window.deleteDeadline = function (id) {
   state.deadlines = state.deadlines.filter((d) => d.id !== id);
   state.studyTasks = state.studyTasks.filter((t) => t.deadlineId !== id);
   saveState();
-}
+};
 
-// Smart Study Plan Generator: spreads study sessions across days before each deadline
+// Load-balanced Study Plan Generator for multiple deadlines
 document.getElementById("btn-generate-plan").addEventListener("click", () => {
   if (state.deadlines.length === 0) {
-    alert("Add your deadlines first, then click Auto-Build!");
+    alert("Add your deadlines first, then click Auto-Build 2-Week Study Plan!");
     return;
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const newTasks = [];
-  const stepNames = {
-    4: ["1. Outline & Gather Material", "2. Core Study / Drafting", "3. Practice & Problem Solving", "4. Final Review & Polish"],
-    3: ["1. Core Concepts & Setup", "2. Main Work / Practice", "3. Final Review & Submission Prep"],
-    2: ["1. Main Study Session", "2. Final Review & Wrap-up"]
+  const stepTemplates = {
+    4: [
+      "Part 1: Topic Review & Outline",
+      "Part 2: Core Work / Problem Solving",
+      "Part 3: Complete Draft / Implementation",
+      "Part 4: Final Polish & Submission Check"
+    ],
+    3: [
+      "Part 1: Review Notes & Setup",
+      "Part 2: Main Study / Assignment Work",
+      "Part 3: Final Review & Wrap-Up"
+    ],
+    2: [
+      "Part 1: Core Study Session",
+      "Part 2: Final Check & Submission"
+    ]
   };
 
-  // Track daily load so we balance study blocks across the 2 weeks
+  // Preserve completion status if regenerating
+  const previousDoneMap = {};
+  state.studyTasks.forEach((t) => {
+    previousDoneMap[`${t.deadlineId}_${t.stepIndex}`] = t.done;
+  });
+
+  // Track how many tasks are scheduled on each date so we balance the load across 2 weeks
   const dailyLoad = {};
+  const generatedTasks = [];
 
-  state.deadlines.forEach((dl) => {
-    const due = new Date(dl.date + "T00:00:00");
-    const diffDays = Math.max(1, Math.round((due - today) / (1000 * 60 * 60 * 24)));
-    const blocksCount = dl.priority + 1; // 4, 3, or 2 sessions
-    const labels = stepNames[blocksCount] || stepNames[3];
+  // Sort deadlines by due date (earliest first, highest priority first)
+  const sortedDeadlines = [...state.deadlines].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return b.priority - a.priority;
+  });
 
-    // Candidate dates from today up to 1 day before deadline (or deadline day if due today)
-    const availableDates = [];
-    for (let i = 0; i < diffDays; i++) {
+  sortedDeadlines.forEach((dl) => {
+    const dueDate = new Date(dl.date + "T00:00:00");
+    const totalDays = Math.max(1, Math.round((dueDate - today) / 86400000));
+    const numBlocks = dl.priority + 1; // High=4, Med=3, Low=2
+    const labels = stepTemplates[numBlocks] || stepTemplates[3];
+
+    // Build list of candidate dates from today up to the deadline
+    const candidateDates = [];
+    for (let i = 0; i < totalDays; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      availableDates.push(toISODate(d));
+      candidateDates.push(toISODate(d));
     }
-    if (availableDates.length === 0) availableDates.push(dl.date);
+    if (candidateDates.length === 0) {
+      candidateDates.push(dl.date);
+    }
 
-    // Pick evenly spaced days with the lowest existing study load
-    for (let b = 0; b < blocksCount; b++) {
-      const idealIdx = Math.min(
-        availableDates.length - 1,
-        Math.floor((b / blocksCount) * availableDates.length)
+    // Divide candidate window into segments and pick the lightest-loaded day in each segment
+    for (let b = 0; b < numBlocks; b++) {
+      const segStart = Math.floor((b * candidateDates.length) / numBlocks);
+      const segEnd = Math.max(
+        segStart,
+        Math.floor(((b + 1) * candidateDates.length) / numBlocks) - 1
       );
-      const chosenDate = availableDates[idealIdx];
-      dailyLoad[chosenDate] = (dailyLoad[chosenDate] || 0) + 1;
 
-      newTasks.push({
+      let chosenDate = candidateDates[segStart];
+      let minLoad = Infinity;
+
+      for (let idx = segStart; idx <= segEnd; idx++) {
+        const dStr = candidateDates[idx];
+        const load = dailyLoad[dStr] || 0;
+        if (load < minLoad) {
+          minLoad = load;
+          chosenDate = dStr;
+        }
+      }
+
+      dailyLoad[chosenDate] = (dailyLoad[chosenDate] || 0) + 1;
+      const taskKey = `${dl.id}_${b}`;
+
+      generatedTasks.push({
         id: `st_${dl.id}_${b}`,
         deadlineId: dl.id,
-        title: `[${dl.title}] ${labels[b]}`,
+        stepIndex: b,
+        title: `${dl.title} — ${labels[b]}`,
         date: chosenDate,
-        done: false
+        done: Boolean(previousDoneMap[taskKey])
       });
     }
   });
 
-  newTasks.sort((a, b) => a.date.localeCompare(b.date));
-  state.studyTasks = newTasks;
+  generatedTasks.sort((a, b) => a.date.localeCompare(b.date));
+  state.studyTasks = generatedTasks;
   saveState();
 });
 
-function toggleStudyTask(taskId) {
-  const t = state.studyTasks.find((x) => x.id === taskId);
-  if (t) {
-    t.done = !t.done;
+window.toggleStudyTask = function (taskId) {
+  const task = state.studyTasks.find((t) => t.id === taskId);
+  if (task) {
+    task.done = !task.done;
     saveState();
   }
-}
+};
 
 // ==========================================
-// 2. CALENDAR VIEW
+// 2. INTERACTIVE CALENDAR
 // ==========================================
 document.getElementById("prev-month").addEventListener("click", () => {
-  currentMonth.setMonth(currentMonth.getMonth() - 1);
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
   renderCalendar();
 });
+
 document.getElementById("next-month").addEventListener("click", () => {
-  currentMonth.setMonth(currentMonth.getMonth() + 1);
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
   renderCalendar();
 });
 
 function renderCalendar() {
   const grid = document.getElementById("calendar-grid");
+  const titleEl = document.getElementById("calendar-title");
   grid.innerHTML = "";
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
-  document.getElementById("calendar-title").textContent = currentMonth.toLocaleDateString("en-US", {
+  titleEl.textContent = currentMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric"
   });
 
-  const firstDay = new Date(year, month, 1);
-  const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const firstDayOfMonth = new Date(year, month, 1);
+  const startOffset = (firstDayOfMonth.getDay() + 6) % 7; // Monday = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = toISODate(new Date());
 
-  for (let i = 0; i < startDayOfWeek; i++) {
-    const empty = document.createElement("div");
-    empty.className = "cal-day other-month";
-    grid.appendChild(empty);
+  // Leading empty cells
+  for (let i = 0; i < startOffset; i++) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "cal-day other-month";
+    grid.appendChild(emptyCell);
   }
 
+  // Days of the month
   for (let day = 1; day <= daysInMonth; day++) {
     const dateObj = new Date(year, month, day);
     const dateStr = toISODate(dateObj);
+
     const cell = document.createElement("div");
     cell.className = "cal-day";
     if (dateStr === todayStr) cell.classList.add("today");
@@ -177,93 +257,114 @@ function renderCalendar() {
 
     let badgesHTML = `<div class="cal-badges">`;
     dayDeadlines.forEach((d) => {
-      badgesHTML += `<div class="dot-deadline">🎯 ${d.title}</div>`;
+      badgesHTML += `<div class="dot-deadline" title="Deadline: ${escapeHTML(d.title)}">🎯 ${escapeHTML(d.title)}</div>`;
     });
     if (dayTasks.length > 0) {
-      const doneCount = dayTasks.filter((t) => t.done).length;
-      badgesHTML += `<div class="dot-study">📖 ${doneCount}/${dayTasks.length} study</div>`;
+      const completed = dayTasks.filter((t) => t.done).length;
+      badgesHTML += `<div class="dot-study">📖 ${completed}/${dayTasks.length} study</div>`;
     }
     badgesHTML += `</div>`;
 
-    cell.innerHTML = `<span>${day}</span>${badgesHTML}`;
+    cell.innerHTML = `<span class="cal-day-num">${day}</span>${badgesHTML}`;
     cell.addEventListener("click", () => {
       selectedDateStr = dateStr;
+      dlDateInput.value = dateStr; // Also pre-fill deadline date picker with clicked day
       renderCalendar();
       renderSelectedDay();
     });
+
     grid.appendChild(cell);
   }
 }
 
 function renderSelectedDay() {
-  document.getElementById("selected-date-label").textContent = `📌 Schedule for ${selectedDateStr}`;
-  const container = document.getElementById("selected-date-content");
+  const labelEl = document.getElementById("selected-date-label");
+  const contentEl = document.getElementById("selected-date-content");
+
+  labelEl.textContent = `📌 Schedule for ${selectedDateStr}`;
+
   const dls = state.deadlines.filter((d) => d.date === selectedDateStr);
   const tasks = state.studyTasks.filter((t) => t.date === selectedDateStr);
 
   if (dls.length === 0 && tasks.length === 0) {
-    container.innerHTML = `<p class="hint">No deadlines or study blocks on this day.</p>`;
+    contentEl.innerHTML = `<p class="helper-text">No deadlines or study blocks on this day. Click "+ Add Deadline" to schedule one here.</p>`;
     return;
   }
 
   let html = "";
   dls.forEach((d) => {
-    html += `<div class="badge badge-deadline" style="margin-bottom:6px;display:inline-block;">🎯 DEADLINE: ${d.title}</div>`;
+    html += `<div><span class="legend-pill pill-deadline">🎯 DEADLINE: ${escapeHTML(d.title)}</span></div>`;
   });
+
   tasks.forEach((t) => {
     html += `
       <label class="task-check">
         <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
-        <span class="${t.done ? "done-text" : ""}">${t.title}</span>
-      </label>`;
+        <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)}</span>
+      </label>
+    `;
   });
-  container.innerHTML = html;
+
+  contentEl.innerHTML = html;
 }
 
 // ==========================================
-// 3. DAILY HABIT TRACKER
+// 3. DAILY STUDY HABITS
 // ==========================================
 document.getElementById("habit-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const input = document.getElementById("habit-input");
-  if (!input.value.trim()) return;
+  const title = input.value.trim();
+  if (!title) return;
+
   state.habits.push({
     id: "h_" + Date.now(),
-    title: input.value.trim(),
+    title,
     completedDates: []
   });
+
   input.value = "";
   saveState();
 });
 
-function toggleHabitToday(habitId) {
+window.toggleHabitToday = function (habitId) {
   const today = toISODate(new Date());
-  const h = state.habits.find((x) => x.id === habitId);
-  if (!h) return;
-  if (h.completedDates.includes(today)) {
-    h.completedDates = h.completedDates.filter((d) => d !== today);
+  const habit = state.habits.find((h) => h.id === habitId);
+  if (!habit) return;
+
+  if (habit.completedDates.includes(today)) {
+    habit.completedDates = habit.completedDates.filter((d) => d !== today);
   } else {
-    h.completedDates.push(today);
+    habit.completedDates.push(today);
   }
   saveState();
-}
+};
+
+window.deleteHabit = function (habitId) {
+  state.habits = state.habits.filter((h) => h.id !== habitId);
+  saveState();
+};
 
 // ==========================================
-// 4. SYNC ACROSS LAPTOP, TABLET & MOBILE
+// 4. CLOUD SYNC & CALENDAR (.ICS) EXPORT
 // ==========================================
+const syncPanel = document.getElementById("sync-panel");
+const firebaseUrlInput = document.getElementById("firebase-url");
+const syncKeyInput = document.getElementById("sync-key");
+const syncStatusEl = document.getElementById("sync-status");
+
 document.getElementById("btn-open-sync").addEventListener("click", () => {
-  document.getElementById("sync-panel").classList.toggle("hidden");
-  document.getElementById("firebase-url").value = state.syncConfig.firebaseUrl || "";
-  document.getElementById("sync-key").value = state.syncConfig.syncKey || "";
+  syncPanel.classList.toggle("hidden");
+  firebaseUrlInput.value = state.syncConfig.firebaseUrl || "";
+  syncKeyInput.value = state.syncConfig.syncKey || "";
 });
 
 async function pushToCloud(silent = false) {
-  const url = document.getElementById("firebase-url").value.trim().replace(/\/$/, "");
-  const key = document.getElementById("sync-key").value.trim();
-  const statusEl = document.getElementById("sync-status");
+  const url = (firebaseUrlInput.value || state.syncConfig.firebaseUrl || "").trim().replace(/\/$/, "");
+  const key = (syncKeyInput.value || state.syncConfig.syncKey || "").trim();
 
   if (!url || !key) {
-    if (!silent) statusEl.textContent = "⚠️ Enter both Firebase URL and Secret Key.";
+    if (!silent) syncStatusEl.textContent = "⚠️ Enter Firebase URL & Sync Key";
     return;
   }
 
@@ -271,6 +372,7 @@ async function pushToCloud(silent = false) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
   try {
+    if (!silent) syncStatusEl.textContent = "⏳ Saving to Cloud...";
     const res = await fetch(`${url}/studyPlanner/${encodeURIComponent(key)}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -281,71 +383,82 @@ async function pushToCloud(silent = false) {
         updatedAt: new Date().toISOString()
       })
     });
-    if (res.ok && !silent) statusEl.textContent = "✅ Synced to Cloud!";
+    if (res.ok) {
+      syncStatusEl.textContent = "✅ Synced to Cloud";
+    } else {
+      syncStatusEl.textContent = "❌ Cloud Error (" + res.status + ")";
+    }
   } catch (err) {
-    if (!silent) statusEl.textContent = "❌ Sync failed. Check URL.";
+    syncStatusEl.textContent = "❌ Network / URL Error";
   }
 }
 
 async function pullFromCloud() {
-  const url = document.getElementById("firebase-url").value.trim().replace(/\/$/, "");
-  const key = document.getElementById("sync-key").value.trim();
-  const statusEl = document.getElementById("sync-status");
+  const url = firebaseUrlInput.value.trim().replace(/\/$/, "");
+  const key = syncKeyInput.value.trim();
 
   if (!url || !key) {
-    statusEl.textContent = "⚠️ Enter both Firebase URL and Secret Key.";
+    syncStatusEl.textContent = "⚠️ Enter Firebase URL & Sync Key";
     return;
   }
 
   try {
+    syncStatusEl.textContent = "⏳ Loading from Cloud...";
     const res = await fetch(`${url}/studyPlanner/${encodeURIComponent(key)}.json`);
     const data = await res.json();
+
     if (data) {
-      state.deadlines = data.deadlines || [];
-      state.studyTasks = data.studyTasks || [];
-      state.habits = data.habits || [];
+      state.deadlines = Array.isArray(data.deadlines) ? data.deadlines : [];
+      state.studyTasks = Array.isArray(data.studyTasks) ? data.studyTasks : [];
+      state.habits = Array.isArray(data.habits) ? data.habits : [];
       state.syncConfig = { firebaseUrl: url, syncKey: key };
-      saveState();
-      statusEl.textContent = "✅ Loaded latest data from Cloud!";
+      saveState(true);
+      syncStatusEl.textContent = "✅ Loaded from Cloud!";
     } else {
-      statusEl.textContent = "ℹ️ No cloud backup found for that key.";
+      syncStatusEl.textContent = "ℹ️ No data found for this key";
     }
   } catch (err) {
-    statusEl.textContent = "❌ Failed to load from Cloud.";
+    syncStatusEl.textContent = "❌ Failed to load from Cloud";
   }
 }
 
 document.getElementById("btn-cloud-push").addEventListener("click", () => pushToCloud(false));
 document.getElementById("btn-cloud-pull").addEventListener("click", pullFromCloud);
 
-// Copy/Paste JSON backup for instant zero-account transfer
 document.getElementById("btn-copy-json").addEventListener("click", () => {
   navigator.clipboard.writeText(JSON.stringify(state));
-  document.getElementById("sync-status").textContent = "📋 Backup code copied!";
+  syncStatusEl.textContent = "📋 Sync Code Copied!";
 });
 
-document.getElementById("btn-paste-json").addEventListener("click", async () => {
-  const raw = prompt("Paste the backup code from your other device:");
-  if (!raw) return;
+document.getElementById("btn-paste-json").addEventListener("click", () => {
+  const pasted = prompt("Paste the Sync Code from your other device:");
+  if (!pasted) return;
   try {
-    state = JSON.parse(raw);
-    saveState();
-    document.getElementById("sync-status").textContent = "✅ Restored from backup code!";
-  } catch {
-    alert("Invalid backup code.");
+    const parsed = JSON.parse(pasted);
+    state.deadlines = parsed.deadlines || [];
+    state.studyTasks = parsed.studyTasks || [];
+    state.habits = parsed.habits || [];
+    saveState(true);
+    syncStatusEl.textContent = "✅ Restored from Sync Code!";
+  } catch (e) {
+    alert("Invalid Sync Code.");
   }
 });
 
-// Export Deadlines & Study Plan as .ics file for Google/Apple/Samsung Calendar
+// Export .ics Calendar file for Phone, Tablet & Laptop Calendar Apps
 document.getElementById("btn-export-ics").addEventListener("click", () => {
-  let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//StudyPlanner//EN\r\n";
+  if (state.deadlines.length === 0 && state.studyTasks.length === 0) {
+    alert("Add your deadlines first before exporting to your calendar!");
+    return;
+  }
 
-  const formatICSDate = (dateStr) => dateStr.replace(/-/g, "");
+  let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//StudyPlanner//EN\r\n";
+  const cleanDate = (d) => d.replace(/-/g, "");
 
   state.deadlines.forEach((d) => {
     ics += "BEGIN:VEVENT\r\n";
     ics += `UID:${d.id}@studyplanner\r\n`;
-    ics += `DTSTART;VALUE=DATE:${formatICSDate(d.date)}\r\n`;
+    ics += `DTSTART;VALUE=DATE:${cleanDate(d.date)}\r\n`;
     ics += `SUMMARY:🎯 DEADLINE: ${d.title}\r\n`;
     ics += "END:VEVENT\r\n";
   });
@@ -353,7 +466,7 @@ document.getElementById("btn-export-ics").addEventListener("click", () => {
   state.studyTasks.forEach((t) => {
     ics += "BEGIN:VEVENT\r\n";
     ics += `UID:${t.id}@studyplanner\r\n`;
-    ics += `DTSTART;VALUE=DATE:${formatICSDate(t.date)}\r\n`;
+    ics += `DTSTART;VALUE=DATE:${cleanDate(t.date)}\r\n`;
     ics += `SUMMARY:📖 STUDY: ${t.title}\r\n`;
     ics += "END:VEVENT\r\n";
   });
@@ -361,82 +474,114 @@ document.getElementById("btn-export-ics").addEventListener("click", () => {
   ics += "END:VCALENDAR";
 
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "study-plan-deadlines.ics";
-  link.click();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "my-2week-study-plan.ics";
+  a.click();
 });
 
 // ==========================================
-// 5. MAIN RENDER
+// 5. RENDER DASHBOARD
 // ==========================================
 function renderAll() {
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const remainingBlocks = state.studyTasks.filter((t) => !t.done).length;
   document.getElementById("deadline-count").textContent = state.deadlines.length;
   document.getElementById("header-summary").textContent =
-    `${state.deadlines.length} Deadlines | ${state.studyTasks.filter((t) => !t.done).length} Study Blocks Remaining`;
+    `${state.deadlines.length} Deadlines • ${remainingBlocks} Study Blocks Remaining`;
 
-  // Render Deadline List
+  // 1. Render Deadlines List
   const dlList = document.getElementById("deadline-list");
-  dlList.innerHTML = state.deadlines
-    .map((d) => {
-      const daysLeft = Math.ceil((new Date(d.date + "T00:00:00") - new Date().setHours(0,0,0,0)) / 86400000);
-      const badge = daysLeft < 0 ? "Past" : daysLeft === 0 ? "Due Today!" : `in ${daysLeft}d`;
-      return `
-        <li class="item-row priority-${d.priority}">
-          <div>
-            <strong>${d.title}</strong>
-            <div class="hint">${d.date} (${badge})</div>
-          </div>
-          <button class="btn btn-icon" onclick="deleteDeadline('${d.id}')">✕</button>
-        </li>`;
-    })
-    .join("");
+  if (state.deadlines.length === 0) {
+    dlList.innerHTML = `<li class="helper-text">No deadlines yet. Add your 9 deadlines above!</li>`;
+  } else {
+    dlList.innerHTML = state.deadlines
+      .map((d) => {
+        const due = new Date(d.date + "T00:00:00");
+        const diffDays = Math.round((due - todayMidnight) / 86400000);
+        const countdown =
+          diffDays < 0
+            ? "Overdue"
+            : diffDays === 0
+            ? "🔥 Due Today!"
+            : `Due in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
 
-  // Render Study Plan grouped by date
-  const planList = document.getElementById("study-plan-list");
-  const grouped = {};
-  state.studyTasks.forEach((t) => {
-    if (!grouped[t.date]) grouped[t.date] = [];
-    grouped[t.date].push(t);
-  });
+        return `
+          <li class="item-row priority-${d.priority}">
+            <div>
+              <strong>${escapeHTML(d.title)}</strong>
+              <div class="item-meta">📅 ${d.date} • ${countdown}</div>
+            </div>
+            <button type="button" class="btn btn-icon" onclick="deleteDeadline('${d.id}')" title="Delete">✕</button>
+          </li>
+        `;
+      })
+      .join("");
+  }
 
-  const doneCount = state.studyTasks.filter((t) => t.done).length;
-  const pct = state.studyTasks.length ? Math.round((doneCount / state.studyTasks.length) * 100) : 0;
+  // 2. Render Daily Study Plan
+  const planContainer = document.getElementById("study-plan-list");
+  const totalTasks = state.studyTasks.length;
+  const completedTasks = state.studyTasks.filter((t) => t.done).length;
+  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   document.getElementById("plan-progress").textContent = `${pct}% Completed`;
 
-  planList.innerHTML = Object.keys(grouped)
-    .sort()
-    .map(
-      (date) => `
-      <div class="plan-day-group">
-        <h4>📅 ${date}</h4>
-        ${grouped[date]
-          .map(
-            (t) => `
-          <label class="task-check">
-            <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
-            <span class="${t.done ? "done-text" : ""}">${t.title}</span>
-          </label>`
-          )
-          .join("")}
-      </div>`
-    )
-    .join("");
+  if (totalTasks === 0) {
+    planContainer.innerHTML = `<p class="helper-text">Add your deadlines, then click <strong>⚡ Auto-Build 2-Week Study Plan</strong> to generate your daily schedule.</p>`;
+  } else {
+    const groupedByDate = {};
+    state.studyTasks.forEach((t) => {
+      if (!groupedByDate[t.date]) groupedByDate[t.date] = [];
+      groupedByDate[t.date].push(t);
+    });
 
-  // Render Habits
-  const today = toISODate(new Date());
+    planContainer.innerHTML = Object.keys(groupedByDate)
+      .sort()
+      .map((dateStr) => {
+        const dayTasks = groupedByDate[dateStr];
+        const dayDone = dayTasks.filter((t) => t.done).length;
+        return `
+          <div class="plan-day-group">
+            <h4>
+              <span>📅 ${dateStr}</span>
+              <span>${dayDone}/${dayTasks.length} done</span>
+            </h4>
+            ${dayTasks
+              .map(
+                (t) => `
+                <label class="task-check">
+                  <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
+                  <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)}</span>
+                </label>
+              `
+              )
+              .join("")}
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  // 3. Render Habits List
+  const todayStr = toISODate(new Date());
   const habitList = document.getElementById("habit-list");
   habitList.innerHTML = state.habits
     .map((h) => {
-      const done = h.completedDates.includes(today);
+      const isDoneToday = h.completedDates.includes(todayStr);
       return `
         <li class="item-row">
           <label class="task-check">
-            <input type="checkbox" ${done ? "checked" : ""} onchange="toggleHabitToday('${h.id}')" />
-            <span class="${done ? "done-text" : ""}">${h.title}</span>
+            <input type="checkbox" ${isDoneToday ? "checked" : ""} onchange="toggleHabitToday('${h.id}')" />
+            <span class="${isDoneToday ? "done-text" : ""}">${escapeHTML(h.title)}</span>
           </label>
-          <span class="badge badge-study">🔥 ${h.completedDates.length}d</span>
-        </li>`;
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span class="legend-pill pill-study">🔥 ${h.completedDates.length}d</span>
+            <button type="button" class="btn btn-icon" onclick="deleteHabit('${h.id}')" title="Delete">✕</button>
+          </div>
+        </li>
+      `;
     })
     .join("");
 
@@ -444,4 +589,10 @@ function renderAll() {
   renderSelectedDay();
 }
 
+// Initial boot + auto-pull if cloud sync is configured
 renderAll();
+if (state.syncConfig.firebaseUrl && state.syncConfig.syncKey) {
+  firebaseUrlInput.value = state.syncConfig.firebaseUrl;
+  syncKeyInput.value = state.syncConfig.syncKey;
+  pullFromCloud();
+}

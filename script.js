@@ -69,6 +69,18 @@ if (dlDateInput) dlDateInput.value = toISODate(new Date());
 const capacityDateInput = document.getElementById("capacity-date");
 if (capacityDateInput) capacityDateInput.value = toISODate(new Date());
 
+if (capacityDateInput) {
+  capacityDateInput.addEventListener("change", () => {
+    const date = capacityDateInput.value;
+    if (!date) return;
+    selectedDateStr = date;
+    document.getElementById("capacity-hours").value = state.dailyCapacity[date] ?? "";
+    renderCalendar();
+    renderSelectedDay();
+    renderAll();
+  });
+}
+
 function selectCalendarDate(date) {
   selectedDateStr = date;
   if (dlDateInput) dlDateInput.value = date;
@@ -127,12 +139,15 @@ document.getElementById("capacity-form").addEventListener("submit", (e) => {
   const hours = Number(document.getElementById("capacity-hours").value);
   if (!date || !Number.isFinite(hours) || hours < 0) return;
   state.dailyCapacity[date] = hours;
-  document.getElementById("capacity-hours").value = "";
+  selectedDateStr = date;
   saveState();
 });
 
 window.deleteCapacity = function (date) {
   delete state.dailyCapacity[date];
+  if (selectedDateStr === date) {
+    document.getElementById("capacity-hours").value = "";
+  }
   saveState();
 };
 
@@ -631,12 +646,13 @@ function renderAll() {
   const capacityList = document.getElementById("capacity-list");
   const capacityDates = Object.keys(state.dailyCapacity).sort();
   const defaultCapacity = 2;
+  const selectedCapacity = state.dailyCapacity[selectedDateStr];
   document.getElementById("capacity-summary").textContent = `${plannedHours}h planned / ${totalRequiredHours}h required`;
+  document.getElementById("today-capacity").textContent =
+    `📅 ${selectedDateStr}: ${selectedCapacity === undefined ? `${defaultCapacity} ساعت پیش‌فرض` : `${selectedCapacity} ساعت آزاد`}`;
   capacityList.innerHTML = capacityDates.length
     ? capacityDates.map((date) => `<li class="item-row compact-row"><span>📅 ${date}</span><strong>${state.dailyCapacity[date]}h</strong><button type="button" class="btn btn-icon" onclick="deleteCapacity('${date}')" title="Delete">✕</button></li>`).join("")
     : `<li class="helper-text">No custom days yet. Default capacity: ${defaultCapacity}h/day.</li>`;
-  document.getElementById("today-capacity").textContent = `امروز (${toISODate(new Date())}): ${state.dailyCapacity[toISODate(new Date())] ?? 2} ساعت آزاد`;
-
   renderCalendar();
   renderSelectedDay();
 }

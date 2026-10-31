@@ -12,7 +12,7 @@
     <header class="app-header">
       <div class="brand">
         <h1>📚 Study Planner &amp; Habit Tracker</h1>
-        <p id="header-summary">0 Deadlines • 0 Study Blocks Remaining</p>
+        <p id="header-summary">0 Deadlines • 0 Study Sessions Remaining</p>
       </div>
       <div class="header-actions">
         <button type="button" id="btn-open-sync" class="btn btn-dark">
@@ -81,16 +81,35 @@
           />
           <div class="form-split">
             <input type="date" id="dl-date" required />
+            <input type="number" id="dl-hours" min="0.5" max="100" step="0.5" placeholder="Required hours (e.g. 6)" required />
+          </div>
+          <div class="form-split">
             <select id="dl-priority">
-              <option value="3">🔥 High Priority (4 Study Blocks)</option>
-              <option value="2" selected>⚡ Medium Priority (3 Study Blocks)</option>
-              <option value="1">🌱 Low Priority (2 Study Blocks)</option>
+              <option value="3">🔥 High Priority</option>
+              <option value="2" selected>⚡ Medium Priority</option>
+              <option value="1">🌱 Low Priority</option>
             </select>
+            <span class="input-help">Priority controls which tasks receive available time first.</span>
           </div>
           <button type="submit" class="btn btn-neon">+ Add Deadline</button>
         </form>
 
         <ul id="deadline-list" class="item-list"></ul>
+      </section>
+
+      <!-- Daily available study capacity -->
+      <section class="card capacity-card">
+        <div class="card-header">
+          <h2>⏱️ Daily Available Time</h2>
+          <span id="capacity-summary" class="badge-progress">0h planned</span>
+        </div>
+        <p class="helper-text">Set how many hours you can study on a specific day. Days you do not set use the 2-hour default.</p>
+        <form id="capacity-form" class="form-split">
+          <input type="date" id="capacity-date" required />
+          <input type="number" id="capacity-hours" min="0" max="24" step="0.5" placeholder="Available hours" required />
+          <button type="submit" class="btn btn-neon">+ Save Daily Time</button>
+        </form>
+        <ul id="capacity-list" class="item-list compact-list"></ul>
       </section>
 
       <!-- 2. Interactive Deadline & Study Calendar -->

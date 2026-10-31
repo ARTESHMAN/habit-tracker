@@ -172,15 +172,17 @@ window.editDeadline = function (id) {
 
 document.getElementById("deadline-cancel-edit").addEventListener("click", resetDeadlineForm);
 
-// Hour-based Study Plan Generator: priority first, then nearest deadline.
+// Smart 14-day planner: urgency first, then priority, then workload.
 document.getElementById("btn-generate-plan").addEventListener("click", () => {
   if (state.deadlines.length === 0) {
-    alert("Add your deadlines first, then click Auto-Build 2-Week Study Plan!");
+    alert("Add your deadlines first, then click Smart Build 2-Week Plan!");
     return;
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const planEnd = new Date(today);
+  planEnd.setDate(planEnd.getDate() + 13);
 
   // Preserve completion status if regenerating
   const previousDoneMap = {};
@@ -191,16 +193,25 @@ document.getElementById("btn-generate-plan").addEventListener("click", () => {
   const dailyLoad = {};
   const generatedTasks = [];
 
-  // Schedule high-priority work first; break ties with the nearest deadline.
+  // Nearer deadlines come first. Priority breaks urgency ties, so an urgent
+  // low-priority deadline is not hidden behind a far-away high-priority one.
   const sortedDeadlines = [...state.deadlines].sort((a, b) => {
-    if (a.priority !== b.priority) return b.priority - a.priority;
-    return a.date.localeCompare(b.date);
+    const aDue = new Date(`${a.date}T00:00:00`);
+    const bDue = new Date(`${b.date}T00:00:00`);
+    const aDays = Math.floor((aDue - today) / 86400000);
+    const bDays = Math.floor((bDue - today) / 86400000);
+    const aUrgency = aDays < 0 ? -1000 + aDays : aDays;
+    const bUrgency = bDays < 0 ? -1000 + bDays : bDays;
+    if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+    if (Number(a.priority) !== Number(b.priority)) return Number(b.priority) - Number(a.priority);
+    return (Number(b.hours) || 0) - (Number(a.hours) || 0);
   });
 
   sortedDeadlines.forEach((dl) => {
     const dueDate = new Date(dl.date + "T00:00:00");
     const totalHours = Math.max(0.5, Number(dl.hours) || 1);
-    const totalDays = Math.max(1, Math.floor((dueDate - today) / 86400000) + 1);
+    const lastPlanDate = dueDate < planEnd ? dueDate : planEnd;
+    const totalDays = Math.max(1, Math.floor((lastPlanDate - today) / 86400000) + 1);
     const candidateDates = [];
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(today);
@@ -218,7 +229,7 @@ document.getElementById("btn-generate-plan").addEventListener("click", () => {
         const capacity = Number(state.dailyCapacity[date] ?? 2);
         return capacity - (dailyLoad[date] || 0) > 0;
       });
-      const chosenDate = availableDates[0] || candidateDates[candidateDates.length - 1];
+      const chosenDate = availableDates[availableDates.length - 1] || candidateDates[candidateDates.length - 1];
       const capacity = Number(state.dailyCapacity[chosenDate] ?? 2);
       const room = Math.max(0.5, capacity - (dailyLoad[chosenDate] || 0));
       const sessionHours = Math.min(2, remaining, room);
@@ -547,12 +558,21 @@ function renderAll() {
   document.getElementById("header-summary").textContent =
     `${state.deadlines.length} Deadlines • ${remainingSessions} Sessions Remaining • ${totalRequiredHours}h Required`;
 
-  // 1. Render Deadlines List
+  // 1. Render deadlines in the same smart order used by the planner.
   const dlList = document.getElementById("deadline-list");
   if (state.deadlines.length === 0) {
     dlList.innerHTML = `<li class="helper-text">No deadlines yet. Add your 9 deadlines above!</li>`;
   } else {
-    dlList.innerHTML = state.deadlines
+    const visibleDeadlines = [...state.deadlines].sort((a, b) => {
+      const aDays = Math.round((new Date(`${a.date}T00:00:00`) - todayMidnight) / 86400000);
+      const bDays = Math.round((new Date(`${b.date}T00:00:00`) - todayMidnight) / 86400000);
+      const aUrgency = aDays < 0 ? -1000 + aDays : aDays;
+      const bUrgency = bDays < 0 ? -1000 + bDays : bDays;
+      if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+      if (Number(a.priority) !== Number(b.priority)) return Number(b.priority) - Number(a.priority);
+      return (Number(b.hours) || 0) - (Number(a.hours) || 0);
+    });
+    dlList.innerHTML = visibleDeadlines
       .map((d) => {
         const due = new Date(d.date + "T00:00:00");
         const diffDays = Math.round((due - todayMidnight) / 86400000);
@@ -587,7 +607,7 @@ function renderAll() {
   document.getElementById("plan-progress").textContent = `${pct}% Completed`;
 
   if (totalTasks === 0) {
-    planContainer.innerHTML = `<p class="helper-text">Add your deadlines, then click <strong>⚡ Auto-Build 2-Week Study Plan</strong> to generate your daily schedule.</p>`;
+    planContainer.innerHTML = `<p class="helper-text">Add your deadlines, then click <strong>🧠 Smart Build 2-Week Plan</strong> to generate your daily schedule.</p>`;
   } else {
     const groupedByDate = {};
     state.studyTasks.forEach((t) => {
@@ -611,7 +631,7 @@ function renderAll() {
                 (t) => `
                 <label class="task-check">
                   <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
-                  <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)} <small class="item-meta">(${Number(t.hours) || 1}h)</small></span>
+                <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)} <small class="item-meta">(${Number(t.hours) || 1}h)</small>${t.overCapacity ? ` <small class="over-capacity">⚠️ Over daily capacity</small>` : ""}</span>
                 </label>
               `
               )

@@ -257,6 +257,25 @@ select:focus {
   gap: 0.65rem;
 }
 
+.input-help {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.capacity-card {
+  grid-column: 1 / -1;
+}
+
+.compact-list {
+  max-height: 180px;
+}
+
+.compact-row {
+  padding: 0.45rem 0.65rem;
+}
+
 .inline-form {
   display: flex;
   gap: 0.65rem;

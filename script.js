@@ -69,6 +69,25 @@ if (dlDateInput) dlDateInput.value = toISODate(new Date());
 const capacityDateInput = document.getElementById("capacity-date");
 if (capacityDateInput) capacityDateInput.value = toISODate(new Date());
 
+function selectCalendarDate(date) {
+  selectedDateStr = date;
+  if (dlDateInput) dlDateInput.value = date;
+  if (capacityDateInput) {
+    capacityDateInput.value = date;
+    document.getElementById("capacity-hours").value = state.dailyCapacity[date] ?? "";
+  }
+  renderCalendar();
+  renderSelectedDay();
+}
+
+function resetDeadlineForm() {
+  document.getElementById("dl-edit-id").value = "";
+  document.getElementById("dl-title").value = "";
+  document.getElementById("dl-hours").value = "";
+  document.getElementById("deadline-submit").textContent = "+ Add Deadline";
+  document.getElementById("deadline-cancel-edit").classList.add("hidden");
+}
+
 deadlineForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const titleEl = document.getElementById("dl-title");
@@ -80,20 +99,24 @@ deadlineForm.addEventListener("submit", (e) => {
   const date = dateEl.value;
   const hours = Number(hoursEl.value);
   const priority = parseInt(priorityEl.value, 10) || 2;
+  const editId = document.getElementById("dl-edit-id").value;
 
   if (!title || !date || !Number.isFinite(hours) || hours <= 0) return;
 
-  state.deadlines.push({
-    id: "dl_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-    title,
-    date,
-    hours,
-    priority
-  });
+  const deadlineData = { title, date, hours, priority };
+  if (editId) {
+    const existing = state.deadlines.find((d) => d.id === editId);
+    if (existing) Object.assign(existing, deadlineData);
+    state.studyTasks = state.studyTasks.filter((t) => t.deadlineId !== editId);
+  } else {
+    state.deadlines.push({
+      id: "dl_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      ...deadlineData
+    });
+  }
 
   state.deadlines.sort((a, b) => a.date.localeCompare(b.date));
-  titleEl.value = "";
-  hoursEl.value = "";
+  resetDeadlineForm();
   selectedDateStr = date;
   saveState();
 });
@@ -118,6 +141,21 @@ window.deleteDeadline = function (id) {
   state.studyTasks = state.studyTasks.filter((t) => t.deadlineId !== id);
   saveState();
 };
+
+window.editDeadline = function (id) {
+  const deadline = state.deadlines.find((d) => d.id === id);
+  if (!deadline) return;
+  document.getElementById("dl-edit-id").value = id;
+  document.getElementById("dl-title").value = deadline.title;
+  document.getElementById("dl-date").value = deadline.date;
+  document.getElementById("dl-hours").value = Number(deadline.hours) || 1;
+  document.getElementById("dl-priority").value = deadline.priority || 2;
+  document.getElementById("deadline-submit").textContent = "💾 Save Changes";
+  document.getElementById("deadline-cancel-edit").classList.remove("hidden");
+  document.getElementById("dl-title").focus();
+};
+
+document.getElementById("deadline-cancel-edit").addEventListener("click", resetDeadlineForm);
 
 // Hour-based Study Plan Generator: priority first, then nearest deadline.
 document.getElementById("btn-generate-plan").addEventListener("click", () => {
@@ -258,14 +296,14 @@ function renderCalendar() {
       const completed = dayTasks.filter((t) => t.done).length;
       badgesHTML += `<div class="dot-study">📖 ${completed}/${dayTasks.length} study</div>`;
     }
+    if (state.dailyCapacity[dateStr] !== undefined) {
+      badgesHTML += `<div class="dot-capacity">⏱️ ${state.dailyCapacity[dateStr]}h free</div>`;
+    }
     badgesHTML += `</div>`;
 
     cell.innerHTML = `<span class="cal-day-num">${day}</span>${badgesHTML}`;
     cell.addEventListener("click", () => {
-      selectedDateStr = dateStr;
-      dlDateInput.value = dateStr; // Also pre-fill deadline date picker with clicked day
-      renderCalendar();
-      renderSelectedDay();
+      selectCalendarDate(dateStr);
     });
 
     grid.appendChild(cell);
@@ -280,13 +318,15 @@ function renderSelectedDay() {
 
   const dls = state.deadlines.filter((d) => d.date === selectedDateStr);
   const tasks = state.studyTasks.filter((t) => t.date === selectedDateStr);
+  const customCapacity = state.dailyCapacity[selectedDateStr];
+  const capacityText = customCapacity === undefined ? "۲ ساعت پیش‌فرض" : `${customCapacity} ساعت آزاد`;
 
   if (dls.length === 0 && tasks.length === 0) {
-    contentEl.innerHTML = `<p class="helper-text">No deadlines or study blocks on this day. Click "+ Add Deadline" to schedule one here.</p>`;
+    contentEl.innerHTML = `<p class="day-capacity">⏱️ ظرفیت مطالعه: <strong>${capacityText}</strong></p><p class="helper-text">No deadlines or study blocks on this day. Click "+ Add Deadline" to schedule one here.</p>`;
     return;
   }
 
-  let html = "";
+  let html = `<p class="day-capacity">⏱️ ظرفیت مطالعه: <strong>${capacityText}</strong></p>`;
   dls.forEach((d) => {
     html += `<div><span class="legend-pill pill-deadline">🎯 DEADLINE: ${escapeHTML(d.title)}</span></div>`;
   });
@@ -514,7 +554,10 @@ function renderAll() {
               <strong>${escapeHTML(d.title)}</strong>
               <div class="item-meta">📅 ${d.date} • ${countdown} • ⏱️ ${Number(d.hours) || 1}h needed</div>
             </div>
-            <button type="button" class="btn btn-icon" onclick="deleteDeadline('${d.id}')" title="Delete">✕</button>
+            <div class="row-actions">
+              <button type="button" class="btn btn-icon" onclick="editDeadline('${d.id}')" title="Edit">✎</button>
+              <button type="button" class="btn btn-icon" onclick="deleteDeadline('${d.id}')" title="Delete">✕</button>
+            </div>
           </li>
         `;
       })
@@ -592,6 +635,7 @@ function renderAll() {
   capacityList.innerHTML = capacityDates.length
     ? capacityDates.map((date) => `<li class="item-row compact-row"><span>📅 ${date}</span><strong>${state.dailyCapacity[date]}h</strong><button type="button" class="btn btn-icon" onclick="deleteCapacity('${date}')" title="Delete">✕</button></li>`).join("")
     : `<li class="helper-text">No custom days yet. Default capacity: ${defaultCapacity}h/day.</li>`;
+  document.getElementById("today-capacity").textContent = `امروز (${toISODate(new Date())}): ${state.dailyCapacity[toISODate(new Date())] ?? 2} ساعت آزاد`;
 
   renderCalendar();
   renderSelectedDay();

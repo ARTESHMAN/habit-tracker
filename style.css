@@ -1,607 +1,188 @@
-:root {
-  --bg-main: #07070c;
-  --bg-card: #11111a;
-  --bg-input: #0b0b12;
-  --bg-hover: #1a1a28;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-color: #262638;
-  --neon-purple: #a855f7;
-  --neon-pink: #ec4899;
-  --neon-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
-  --neon-glow: 0 4px 18px rgba(236, 72, 153, 0.35);
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #10b981;
-  --study-blue: #3b82f6;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-html {
-  color-scheme: dark;
-}
-
-body {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(168, 85, 247, 0.16), transparent 28rem),
-    radial-gradient(circle at 92% 12%, rgba(236, 72, 153, 0.1), transparent 25rem),
-    var(--bg-main);
-  color: var(--text-main);
-  min-height: 100vh;
-  padding: 1.25rem;
-  line-height: 1.5;
-}
-
-.app-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.hidden {
-  display: none !important;
-}
-
-/* ==========================================
-   HEADER
-   ========================================== */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  position: relative;
-}
-
-.brand h1 {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #fff, #d8b4fe 45%, #f9a8d4);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.brand p {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  margin-top: 0.2rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.65rem;
-  flex-wrap: wrap;
-}
-
-/* ==========================================
-   BUTTONS & INPUTS
-   ========================================== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 1.15rem;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-  color: var(--text-main);
-  white-space: nowrap;
-}
-
-.btn:active {
-  transform: scale(0.97);
-}
-
-.btn-neon {
-  background: var(--neon-gradient);
-  box-shadow: var(--neon-glow);
-  color: #ffffff;
-}
-
-.btn-neon:hover {
-  box-shadow: 0 6px 24px rgba(236, 72, 153, 0.55);
-}
-
-.btn-neon-sm {
-  background: var(--neon-gradient);
-  box-shadow: var(--neon-glow);
-  padding: 0.45rem 0.85rem;
-  font-size: 0.8rem;
-  border-radius: 8px;
-  color: #ffffff;
-}
-
-.smart-plan-button {
-  min-height: 38px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-}
-
-.btn-dark {
-  background: #1c1c29;
-  border-color: var(--border-color);
-  color: var(--text-main);
-}
-
-.btn-dark:hover {
-  background: #252538;
-  border-color: var(--neon-purple);
-}
-
-.btn-outline {
-  background: transparent;
-  border-color: var(--border-color);
-  color: var(--text-muted);
-}
-
-.btn-outline:hover {
-  color: var(--text-main);
-  border-color: var(--neon-pink);
-}
-
-.btn-icon {
-  background: #1c1c29;
-  border: 1px solid var(--border-color);
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 8px;
-  font-size: 0.85rem;
-}
-
-.btn-icon:hover {
-  border-color: var(--neon-purple);
-  background: #252538;
-}
-
-input,
-select {
-  width: 100%;
-  background: var(--bg-input);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 0.7rem 0.9rem;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-input:focus,
-select:focus {
-  border-color: var(--neon-purple);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
-}
-
-/* ==========================================
-   CARDS & DASHBOARD GRID
-   ========================================== */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-  position: relative;
-  overflow: hidden;
-}
-
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 2px;
-  background: var(--neon-gradient);
-  opacity: 0.65;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.card-header h2 {
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-/* ==========================================
-   SYNC PANEL
-   ========================================== */
-.sync-card {
-  margin-bottom: 1.25rem;
-  border-color: rgba(168, 85, 247, 0.4);
-}
-
-.helper-text {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.sync-status {
-  font-size: 0.8rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  background: rgba(168, 85, 247, 0.15);
-  color: #d8b4fe;
-}
-
-.sync-grid {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr auto auto;
-  gap: 0.65rem;
-}
-
-.sync-backup-row {
-  display: flex;
-  gap: 0.65rem;
-  flex-wrap: wrap;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-color);
-}
-
-/* ==========================================
-   FORMS & LISTS
-   ========================================== */
-.stack-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.form-split {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 0.65rem;
-}
-
-.input-help {
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-}
-
-.capacity-card {
-  grid-column: 1 / -1;
-}
-
-.compact-list {
-  max-height: 180px;
-}
-
-.compact-row {
-  padding: 0.45rem 0.65rem;
-}
-
-.inline-form {
-  display: flex;
-  gap: 0.65rem;
-}
-
-.form-actions,
-.row-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.capacity-highlight,
-.day-capacity {
-  padding: 0.65rem 0.8rem;
-  border-radius: 8px;
-  background: rgba(59, 130, 246, 0.14);
-  color: #bfdbfe;
-  font-size: 0.85rem;
-}
-
-.dot-capacity {
-  color: #86efac;
-}
-
-.item-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  max-height: 340px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-left: 4px solid var(--neon-purple);
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
-}
-
-.item-row.priority-3 {
-  border-left-color: var(--danger);
-}
-
-.item-row.priority-2 {
-  border-left-color: var(--warning);
-}
-
-.item-row.priority-1 {
-  border-left-color: var(--success);
-}
-
-.item-meta {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 0.15rem;
-}
-
-/* ==========================================
-   CALENDAR
-   ========================================== */
-.calendar-nav {
-  justify-content: space-between;
-}
-
-.calendar-legend {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.legend-pill {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-weight: 600;
-}
-
-.pill-deadline {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-}
-
-.pill-study {
-  background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
-}
-
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  text-align: center;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  padding-bottom: 0.25rem;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.cal-day {
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  min-height: 70px;
-  padding: 6px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: border-color 0.15s ease, background 0.15s ease;
-  overflow: hidden;
-}
-
-.cal-day:hover {
-  background: var(--bg-hover);
-  border-color: var(--neon-purple);
-}
-
-.cal-day.today {
-  border-color: var(--neon-pink);
-  box-shadow: inset 0 0 0 1px var(--neon-pink);
-}
-
-.cal-day.selected {
-  background: #1c162e;
-  border-color: var(--neon-purple);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
-}
-
-.cal-day.other-month {
-  opacity: 0.25;
-  pointer-events: none;
-}
-
-.cal-day-num {
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.cal-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  width: 100%;
-}
-
-.dot-deadline,
-.dot-study {
-  font-size: 0.65rem;
-  padding: 2px 4px;
-  border-radius: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-}
-
-.dot-deadline {
-  background: rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
-}
-
-.dot-study {
-  background: rgba(59, 130, 246, 0.25);
-  color: #93c5fd;
-}
-
-.day-inspector {
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 0.85rem;
-}
-
-.day-inspector h3 {
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-  color: #e9d5ff;
-}
-
-.day-inspector-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  font-size: 0.85rem;
-}
-
-/* ==========================================
-   STUDY PLAN & CHECKBOXES
-   ========================================== */
-.badge-progress {
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  background: rgba(168, 85, 247, 0.2);
-  color: #e9d5ff;
-}
-
-.study-plan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 430px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.plan-day-group {
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 0.85rem;
-}
-
-.plan-day-group h4 {
-  font-size: 0.85rem;
-  color: #f472b6;
-  margin-bottom: 0.5rem;
-  display: flex;
-  justify-content: space-between;
-}
-
-.plan-intro {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-}
-
-.plan-intro span {
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: rgba(168, 85, 247, 0.08);
-}
-
-.over-capacity {
-  color: #fbbf24;
-  font-size: 0.72rem;
-}
-
-.task-check {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.35rem 0;
-  cursor: pointer;
-  font-size: 0.88rem;
-}
-
-.task-check input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--neon-pink);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.done-text {
-  text-decoration: line-through;
-  color: var(--text-muted);
-}
-
-/* ==========================================
-   RESPONSIVE: TABLET & MOBILE
-   ========================================== */
-@media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sync-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 600px) {
-  body {
-    padding: 0.75rem;
-  }
-
-  .form-split,
-  .sync-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .cal-day {
-    min-height: 56px;
-    padding: 4px;
-  }
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Planner & Habit Tracker</title>
+  <link rel="stylesheet" href="style.css?v=4" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <h1>📚 Study Planner &amp; Habit Tracker</h1>
+        <p id="header-summary">0 Deadlines • 0 Study Sessions Remaining</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="btn-open-sync" class="btn btn-dark">
+          🔄 Sync Devices
+        </button>
+        <button type="button" id="btn-export-ics" class="btn btn-dark">
+          📅 Export to Calendar (.ics)
+        </button>
+      </div>
+    </header>
+
+    <!-- Collapsible Cloud Sync Panel (Laptop, Tablet & Mobile) -->
+    <section id="sync-panel" class="card sync-card hidden">
+      <div class="card-header">
+        <h2>☁️ Cross-Device Sync (Laptop, Tablet &amp; Mobile)</h2>
+        <span id="sync-status" class="sync-status">Not connected</span>
+      </div>
+      <p class="helper-text">
+        Enter a free Firebase Realtime Database URL and a personal Sync Key on your laptop, tablet, and phone to sync automatically, or copy/paste a backup code below.
+      </p>
+      <div class="sync-grid">
+        <input
+          type="url"
+          id="firebase-url"
+          placeholder="https://your-project-default-rtdb.firebaseio.com"
+        />
+        <input
+          type="text"
+          id="sync-key"
+          placeholder="Secret Sync Key (e.g. ali-deadlines)"
+        />
+        <button type="button" id="btn-cloud-push" class="btn btn-neon">
+          ⬆️ Save to Cloud
+        </button>
+        <button type="button" id="btn-cloud-pull" class="btn btn-dark">
+          ⬇️ Load from Cloud
+        </button>
+      </div>
+      <div class="sync-backup-row">
+        <button type="button" id="btn-copy-json" class="btn btn-outline">
+          📋 Copy Sync Code
+        </button>
+        <button type="button" id="btn-paste-json" class="btn btn-outline">
+          📥 Paste Sync Code
+        </button>
+      </div>
+    </section>
+
+    <!-- Main 4-Panel Dashboard Grid -->
+    <main class="dashboard-grid">
+      <!-- 1. Deadlines Manager -->
+      <section class="card">
+        <div class="card-header">
+          <h2>⏳ Deadlines (<span id="deadline-count">0</span>)</h2>
+          <button type="button" id="btn-generate-plan" class="btn btn-neon-sm smart-plan-button">
+            🧠 Smart Build 2-Week Plan
+          </button>
+        </div>
+
+        <form id="deadline-form" class="stack-form">
+          <input type="hidden" id="dl-edit-id" />
+          <input
+            type="text"
+            id="dl-title"
+            placeholder="Subject / Deadline (e.g. OS Lab Report 4)"
+            required
+          />
+          <div class="form-split">
+            <input type="date" id="dl-date" required />
+            <input type="number" id="dl-hours" min="0.5" max="100" step="0.5" placeholder="Required hours (e.g. 6)" required />
+          </div>
+          <div class="form-split">
+            <select id="dl-priority">
+              <option value="3">🔥 High Priority</option>
+              <option value="2" selected>⚡ Medium Priority</option>
+              <option value="1">🌱 Low Priority</option>
+            </select>
+            <span class="input-help">Priority controls which tasks receive available time first.</span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="deadline-submit" class="btn btn-neon">+ Add Deadline</button>
+            <button type="button" id="deadline-cancel-edit" class="btn btn-outline hidden">Cancel Edit</button>
+          </div>
+        </form>
+
+        <ul id="deadline-list" class="item-list"></ul>
+      </section>
+
+      <!-- Daily available study capacity -->
+      <section class="card capacity-card">
+        <div class="card-header">
+          <h2>⏱️ Daily Available Time</h2>
+          <span id="capacity-summary" class="badge-progress">0h planned</span>
+        </div>
+        <p class="helper-text">Set how many hours you can study on a specific day. Days you do not set use the 2-hour default.</p>
+        <form id="capacity-form" class="form-split">
+          <input type="date" id="capacity-date" required />
+          <input type="number" id="capacity-hours" min="0" max="24" step="0.5" placeholder="Available hours" required />
+          <button type="submit" class="btn btn-neon">+ Save Daily Time</button>
+        </form>
+        <p id="today-capacity" class="capacity-highlight"></p>
+        <ul id="capacity-list" class="item-list compact-list"></ul>
+      </section>
+
+      <!-- 2. Interactive Deadline & Study Calendar -->
+      <section class="card">
+        <div class="card-header calendar-nav">
+          <button type="button" id="prev-month" class="btn btn-icon">◀</button>
+          <h2 id="calendar-title">October 2026</h2>
+          <button type="button" id="next-month" class="btn btn-icon">▶</button>
+        </div>
+
+        <div class="calendar-legend">
+          <span class="legend-pill pill-deadline">🎯 Deadline</span>
+          <span class="legend-pill pill-study">📖 Study Block</span>
+        </div>
+
+        <div class="calendar-weekdays">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+
+        <div id="calendar-grid" class="calendar-grid"></div>
+
+        <div class="day-inspector">
+          <h3 id="selected-date-label">Selected Date</h3>
+          <div id="selected-date-content" class="day-inspector-body"></div>
+        </div>
+      </section>
+
+      <!-- 3. Auto-Generated 2-Week Study Plan -->
+      <section class="card">
+        <div class="card-header">
+          <h2>🗓️ Daily Study Plan</h2>
+          <span id="plan-progress" class="badge-progress">0% Completed</span>
+        </div>
+        <div class="plan-intro">
+          <span>🎯 Nearer deadlines first</span>
+          <span>🔥 Higher priority wins ties</span>
+          <span>⏱️ Uses your free hours</span>
+        </div>
+        <div id="study-plan-list" class="study-plan-list"></div>
+      </section>
+
+      <!-- 4. Daily Study Habits -->
+      <section class="card">
+        <div class="card-header">
+          <h2>✅ Daily Study Habits</h2>
+        </div>
+
+        <form id="habit-form" class="inline-form">
+          <input
+            type="text"
+            id="habit-input"
+            placeholder="New daily habit (e.g. 2h Deep Work)"
+            required
+          />
+          <button type="submit" class="btn btn-neon">+ Add</button>
+        </form>
+
+        <ul id="habit-list" class="item-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js?v=4"></script>
+</body>
+</html>

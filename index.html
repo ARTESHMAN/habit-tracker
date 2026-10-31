@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Study Planner & Habit Tracker</title>
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
   <div class="app-container">
@@ -73,6 +73,7 @@
         </div>
 
         <form id="deadline-form" class="stack-form">
+          <input type="hidden" id="dl-edit-id" />
           <input
             type="text"
             id="dl-title"
@@ -91,7 +92,10 @@
             </select>
             <span class="input-help">Priority controls which tasks receive available time first.</span>
           </div>
-          <button type="submit" class="btn btn-neon">+ Add Deadline</button>
+          <div class="form-actions">
+            <button type="submit" id="deadline-submit" class="btn btn-neon">+ Add Deadline</button>
+            <button type="button" id="deadline-cancel-edit" class="btn btn-outline hidden">Cancel Edit</button>
+          </div>
         </form>
 
         <ul id="deadline-list" class="item-list"></ul>
@@ -109,6 +113,7 @@
           <input type="number" id="capacity-hours" min="0" max="24" step="0.5" placeholder="Available hours" required />
           <button type="submit" class="btn btn-neon">+ Save Daily Time</button>
         </form>
+        <p id="today-capacity" class="capacity-highlight"></p>
         <ul id="capacity-list" class="item-list compact-list"></ul>
       </section>
 
@@ -173,6 +178,6 @@
     </main>
   </div>
 
-  <script src="script.js?v=2"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>

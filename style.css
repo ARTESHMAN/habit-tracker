@@ -281,6 +281,25 @@ select:focus {
   gap: 0.65rem;
 }
 
+.form-actions,
+.row-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.capacity-highlight,
+.day-capacity {
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #bfdbfe;
+  font-size: 0.85rem;
+}
+
+.dot-capacity {
+  color: #86efac;
+}
+
 .item-list {
   list-style: none;
   display: flex;

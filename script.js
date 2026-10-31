@@ -9,6 +9,7 @@ function loadInitialState() {
       return {
         deadlines: Array.isArray(parsed.deadlines) ? parsed.deadlines : [],
         studyTasks: Array.isArray(parsed.studyTasks) ? parsed.studyTasks : [],
+        dailyCapacity: parsed.dailyCapacity && typeof parsed.dailyCapacity === "object" ? parsed.dailyCapacity : {},
         habits: Array.isArray(parsed.habits) ? parsed.habits : [],
         syncConfig: parsed.syncConfig || { firebaseUrl: "", syncKey: "" }
       };
@@ -19,6 +20,7 @@ function loadInitialState() {
   return {
     deadlines: [],
     studyTasks: [],
+    dailyCapacity: {},
     habits: [
       { id: "h_1", title: "2h Focused Study (No Phone)", completedDates: [] },
       { id: "h_2", title: "Review Tomorrow's Deadlines", completedDates: [] }
@@ -64,31 +66,52 @@ function saveState(skipCloud = false) {
 const deadlineForm = document.getElementById("deadline-form");
 const dlDateInput = document.getElementById("dl-date");
 if (dlDateInput) dlDateInput.value = toISODate(new Date());
+const capacityDateInput = document.getElementById("capacity-date");
+if (capacityDateInput) capacityDateInput.value = toISODate(new Date());
 
 deadlineForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const titleEl = document.getElementById("dl-title");
   const dateEl = document.getElementById("dl-date");
+  const hoursEl = document.getElementById("dl-hours");
   const priorityEl = document.getElementById("dl-priority");
 
   const title = titleEl.value.trim();
   const date = dateEl.value;
+  const hours = Number(hoursEl.value);
   const priority = parseInt(priorityEl.value, 10) || 2;
 
-  if (!title || !date) return;
+  if (!title || !date || !Number.isFinite(hours) || hours <= 0) return;
 
   state.deadlines.push({
     id: "dl_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
     title,
     date,
+    hours,
     priority
   });
 
   state.deadlines.sort((a, b) => a.date.localeCompare(b.date));
   titleEl.value = "";
+  hoursEl.value = "";
   selectedDateStr = date;
   saveState();
 });
+
+document.getElementById("capacity-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const date = document.getElementById("capacity-date").value;
+  const hours = Number(document.getElementById("capacity-hours").value);
+  if (!date || !Number.isFinite(hours) || hours < 0) return;
+  state.dailyCapacity[date] = hours;
+  document.getElementById("capacity-hours").value = "";
+  saveState();
+});
+
+window.deleteCapacity = function (date) {
+  delete state.dailyCapacity[date];
+  saveState();
+};
 
 window.deleteDeadline = function (id) {
   state.deadlines = state.deadlines.filter((d) => d.id !== id);
@@ -96,7 +119,7 @@ window.deleteDeadline = function (id) {
   saveState();
 };
 
-// Load-balanced Study Plan Generator for multiple deadlines
+// Hour-based Study Plan Generator: priority first, then nearest deadline.
 document.getElementById("btn-generate-plan").addEventListener("click", () => {
   if (state.deadlines.length === 0) {
     alert("Add your deadlines first, then click Auto-Build 2-Week Study Plan!");
@@ -106,47 +129,25 @@ document.getElementById("btn-generate-plan").addEventListener("click", () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const stepTemplates = {
-    4: [
-      "Part 1: Topic Review & Outline",
-      "Part 2: Core Work / Problem Solving",
-      "Part 3: Complete Draft / Implementation",
-      "Part 4: Final Polish & Submission Check"
-    ],
-    3: [
-      "Part 1: Review Notes & Setup",
-      "Part 2: Main Study / Assignment Work",
-      "Part 3: Final Review & Wrap-Up"
-    ],
-    2: [
-      "Part 1: Core Study Session",
-      "Part 2: Final Check & Submission"
-    ]
-  };
-
   // Preserve completion status if regenerating
   const previousDoneMap = {};
   state.studyTasks.forEach((t) => {
     previousDoneMap[`${t.deadlineId}_${t.stepIndex}`] = t.done;
   });
 
-  // Track how many tasks are scheduled on each date so we balance the load across 2 weeks
   const dailyLoad = {};
   const generatedTasks = [];
 
-  // Sort deadlines by due date (earliest first, highest priority first)
+  // Schedule high-priority work first; break ties with the nearest deadline.
   const sortedDeadlines = [...state.deadlines].sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
-    return b.priority - a.priority;
+    if (a.priority !== b.priority) return b.priority - a.priority;
+    return a.date.localeCompare(b.date);
   });
 
   sortedDeadlines.forEach((dl) => {
     const dueDate = new Date(dl.date + "T00:00:00");
-    const totalDays = Math.max(1, Math.round((dueDate - today) / 86400000));
-    const numBlocks = dl.priority + 1; // High=4, Med=3, Low=2
-    const labels = stepTemplates[numBlocks] || stepTemplates[3];
-
-    // Build list of candidate dates from today up to the deadline
+    const totalHours = Math.max(0.5, Number(dl.hours) || 1);
+    const totalDays = Math.max(1, Math.floor((dueDate - today) / 86400000) + 1);
     const candidateDates = [];
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(today);
@@ -157,37 +158,31 @@ document.getElementById("btn-generate-plan").addEventListener("click", () => {
       candidateDates.push(dl.date);
     }
 
-    // Divide candidate window into segments and pick the lightest-loaded day in each segment
-    for (let b = 0; b < numBlocks; b++) {
-      const segStart = Math.floor((b * candidateDates.length) / numBlocks);
-      const segEnd = Math.max(
-        segStart,
-        Math.floor(((b + 1) * candidateDates.length) / numBlocks) - 1
-      );
-
-      let chosenDate = candidateDates[segStart];
-      let minLoad = Infinity;
-
-      for (let idx = segStart; idx <= segEnd; idx++) {
-        const dStr = candidateDates[idx];
-        const load = dailyLoad[dStr] || 0;
-        if (load < minLoad) {
-          minLoad = load;
-          chosenDate = dStr;
-        }
-      }
-
-      dailyLoad[chosenDate] = (dailyLoad[chosenDate] || 0) + 1;
-      const taskKey = `${dl.id}_${b}`;
-
+    let remaining = totalHours;
+    let sessionIndex = 0;
+    while (remaining > 0) {
+      const availableDates = candidateDates.filter((date) => {
+        const capacity = Number(state.dailyCapacity[date] ?? 2);
+        return capacity - (dailyLoad[date] || 0) > 0;
+      });
+      const chosenDate = availableDates[0] || candidateDates[candidateDates.length - 1];
+      const capacity = Number(state.dailyCapacity[chosenDate] ?? 2);
+      const room = Math.max(0.5, capacity - (dailyLoad[chosenDate] || 0));
+      const sessionHours = Math.min(2, remaining, room);
+      const taskKey = `${dl.id}_${sessionIndex}`;
       generatedTasks.push({
-        id: `st_${dl.id}_${b}`,
+        id: `st_${dl.id}_${sessionIndex}_${Date.now()}`,
         deadlineId: dl.id,
-        stepIndex: b,
-        title: `${dl.title} — ${labels[b]}`,
+        stepIndex: sessionIndex,
+        title: `${dl.title} — Study Session ${sessionIndex + 1}`,
         date: chosenDate,
+        hours: sessionHours,
+        overCapacity: !availableDates.length,
         done: Boolean(previousDoneMap[taskKey])
       });
+      dailyLoad[chosenDate] = (dailyLoad[chosenDate] || 0) + sessionHours;
+      remaining = Math.round((remaining - sessionHours) * 10) / 10;
+      sessionIndex += 1;
     }
   });
 
@@ -300,7 +295,7 @@ function renderSelectedDay() {
     html += `
       <label class="task-check">
         <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
-        <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)}</span>
+        <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)} (${Number(t.hours) || 1}h)${t.overCapacity ? " ⚠️" : ""}</span>
       </label>
     `;
   });
@@ -379,6 +374,7 @@ async function pushToCloud(silent = false) {
       body: JSON.stringify({
         deadlines: state.deadlines,
         studyTasks: state.studyTasks,
+        dailyCapacity: state.dailyCapacity,
         habits: state.habits,
         updatedAt: new Date().toISOString()
       })
@@ -410,6 +406,7 @@ async function pullFromCloud() {
     if (data) {
       state.deadlines = Array.isArray(data.deadlines) ? data.deadlines : [];
       state.studyTasks = Array.isArray(data.studyTasks) ? data.studyTasks : [];
+      state.dailyCapacity = data.dailyCapacity && typeof data.dailyCapacity === "object" ? data.dailyCapacity : {};
       state.habits = Array.isArray(data.habits) ? data.habits : [];
       state.syncConfig = { firebaseUrl: url, syncKey: key };
       saveState(true);
@@ -437,6 +434,7 @@ document.getElementById("btn-paste-json").addEventListener("click", () => {
     const parsed = JSON.parse(pasted);
     state.deadlines = parsed.deadlines || [];
     state.studyTasks = parsed.studyTasks || [];
+    state.dailyCapacity = parsed.dailyCapacity || {};
     state.habits = parsed.habits || [];
     saveState(true);
     syncStatusEl.textContent = "✅ Restored from Sync Code!";
@@ -487,10 +485,12 @@ function renderAll() {
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
 
-  const remainingBlocks = state.studyTasks.filter((t) => !t.done).length;
+  const remainingSessions = state.studyTasks.filter((t) => !t.done).length;
+  const totalRequiredHours = state.deadlines.reduce((sum, d) => sum + (Number(d.hours) || 0), 0);
+  const plannedHours = state.studyTasks.reduce((sum, t) => sum + (Number(t.hours) || 0), 0);
   document.getElementById("deadline-count").textContent = state.deadlines.length;
   document.getElementById("header-summary").textContent =
-    `${state.deadlines.length} Deadlines • ${remainingBlocks} Study Blocks Remaining`;
+    `${state.deadlines.length} Deadlines • ${remainingSessions} Sessions Remaining • ${totalRequiredHours}h Required`;
 
   // 1. Render Deadlines List
   const dlList = document.getElementById("deadline-list");
@@ -512,7 +512,7 @@ function renderAll() {
           <li class="item-row priority-${d.priority}">
             <div>
               <strong>${escapeHTML(d.title)}</strong>
-              <div class="item-meta">📅 ${d.date} • ${countdown}</div>
+              <div class="item-meta">📅 ${d.date} • ${countdown} • ⏱️ ${Number(d.hours) || 1}h needed</div>
             </div>
             <button type="button" class="btn btn-icon" onclick="deleteDeadline('${d.id}')" title="Delete">✕</button>
           </li>
@@ -546,14 +546,14 @@ function renderAll() {
           <div class="plan-day-group">
             <h4>
               <span>📅 ${dateStr}</span>
-              <span>${dayDone}/${dayTasks.length} done</span>
+              <span>${dayDone}/${dayTasks.length} done • ${dayTasks.reduce((sum, t) => sum + (Number(t.hours) || 0), 0)}h</span>
             </h4>
             ${dayTasks
               .map(
                 (t) => `
                 <label class="task-check">
                   <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleStudyTask('${t.id}')" />
-                  <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)}</span>
+                  <span class="${t.done ? "done-text" : ""}">${escapeHTML(t.title)} <small class="item-meta">(${Number(t.hours) || 1}h)</small></span>
                 </label>
               `
               )
@@ -584,6 +584,14 @@ function renderAll() {
       `;
     })
     .join("");
+
+  const capacityList = document.getElementById("capacity-list");
+  const capacityDates = Object.keys(state.dailyCapacity).sort();
+  const defaultCapacity = 2;
+  document.getElementById("capacity-summary").textContent = `${plannedHours}h planned / ${totalRequiredHours}h required`;
+  capacityList.innerHTML = capacityDates.length
+    ? capacityDates.map((date) => `<li class="item-row compact-row"><span>📅 ${date}</span><strong>${state.dailyCapacity[date]}h</strong><button type="button" class="btn btn-icon" onclick="deleteCapacity('${date}')" title="Delete">✕</button></li>`).join("")
+    : `<li class="helper-text">No custom days yet. Default capacity: ${defaultCapacity}h/day.</li>`;
 
   renderCalendar();
   renderSelectedDay();
